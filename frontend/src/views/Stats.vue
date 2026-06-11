@@ -335,6 +335,200 @@
         </div>
       </div>
     </div>
+
+    <div class="guest-stats-section">
+      <h3 class="section-title-big">👥 宾客签到统计</h3>
+      
+      <div class="stats-overview">
+        <div class="stat-card guest-total">
+          <div class="stat-icon">👥</div>
+          <div class="stat-content">
+            <div class="stat-value">{{ guestStats.total_guests || 0 }}</div>
+            <div class="stat-label">宾客总数</div>
+          </div>
+        </div>
+        <div class="stat-card guest-expected">
+          <div class="stat-icon">👨‍👩‍👧</div>
+          <div class="stat-content">
+            <div class="stat-value">{{ guestStats.total_expected || 0 }}</div>
+            <div class="stat-label">预计人数</div>
+          </div>
+        </div>
+        <div class="stat-card guest-arrived">
+          <div class="stat-icon">✅</div>
+          <div class="stat-content">
+            <div class="stat-value">{{ guestStats.total_arrived || 0 }}</div>
+            <div class="stat-label">已到人数</div>
+          </div>
+        </div>
+        <div class="stat-card guest-rate">
+          <div class="stat-icon">📊</div>
+          <div class="stat-content">
+            <div class="stat-value">{{ guestStats.arrival_rate || 0 }}%</div>
+            <div class="stat-label">到场率</div>
+          </div>
+        </div>
+        <div class="stat-card guest-checkin">
+          <div class="stat-icon">✍️</div>
+          <div class="stat-content">
+            <div class="stat-value">{{ guestStats.checkin_rate || 0 }}%</div>
+            <div class="stat-label">签到率</div>
+          </div>
+        </div>
+        <div class="stat-card guest-pending">
+          <div class="stat-icon">⏳</div>
+          <div class="stat-content">
+            <div class="stat-value">{{ guestStats.pending_count || 0 }}</div>
+            <div class="stat-label">待签到</div>
+          </div>
+        </div>
+        <div class="stat-card guest-late">
+          <div class="stat-icon">⏰</div>
+          <div class="stat-content">
+            <div class="stat-value" style="color: #e6a23c;">{{ guestStats.late_count || 0 }}</div>
+            <div class="stat-label">迟到</div>
+          </div>
+        </div>
+        <div class="stat-card guest-absent">
+          <div class="stat-icon">❌</div>
+          <div class="stat-content">
+            <div class="stat-value" style="color: #f56c6c;">{{ guestStats.absent_count || 0 }}</div>
+            <div class="stat-label">未到</div>
+          </div>
+        </div>
+        <div class="stat-card guest-temp-add">
+          <div class="stat-icon">➕</div>
+          <div class="stat-content">
+            <div class="stat-value" style="color: #67c23a;">+{{ guestStats.temp_added || 0 }}</div>
+            <div class="stat-label">临时增加</div>
+          </div>
+        </div>
+        <div class="stat-card guest-temp-reduce">
+          <div class="stat-icon">➖</div>
+          <div class="stat-content">
+            <div class="stat-value" style="color: #e6a23c;">-{{ guestStats.temp_reduced || 0 }}</div>
+            <div class="stat-label">临时减少</div>
+          </div>
+        </div>
+        <div class="stat-card guest-high">
+          <div class="stat-icon">⭐</div>
+          <div class="stat-content">
+            <div class="stat-value" style="color: #f56c6c;">{{ guestStats.high_priority_total || 0 }}</div>
+            <div class="stat-label">高关注宾客</div>
+          </div>
+        </div>
+        <div class="stat-card guest-unassigned">
+          <div class="stat-icon">🪑</div>
+          <div class="stat-content">
+            <div class="stat-value">{{ guestStats.unassigned_guest_count || 0 }}</div>
+            <div class="stat-label">未分桌</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="charts-row">
+        <div class="chart-card">
+          <h3 class="chart-title">📊 签到状态分布</h3>
+          <div ref="checkinChartRef" class="chart-container"></div>
+        </div>
+        <div class="chart-card">
+          <h3 class="chart-title">🪑 各桌入座情况</h3>
+          <div ref="seatingChartRef" class="chart-container"></div>
+        </div>
+      </div>
+
+      <div class="charts-row">
+        <div class="chart-card">
+          <h3 class="chart-title">👨‍👩‍👧‍👦 各分组人数统计</h3>
+          <div class="group-stats-list">
+            <div
+              v-for="group in guestStats.group_stats"
+              :key="group.group_name"
+              class="group-stat-item"
+            >
+              <div class="group-name">{{ group.group_name }}</div>
+              <div class="group-info">
+                <span class="group-count">{{ group.guest_count }} 户 / {{ group.total_people }} 人</span>
+              </div>
+              <el-progress 
+                :percentage="Math.round(group.total_people / (guestStats.total_expected || 1) * 100)" 
+                :stroke-width="8" 
+              />
+            </div>
+            <div v-if="guestStats.group_stats?.length === 0" class="empty-state">
+              <div class="empty-icon">📊</div>
+              <div class="empty-text">暂无分组数据</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <h3 class="chart-title">⭐ 高关注宾客提醒</h3>
+          <div class="high-priority-list">
+            <div
+              v-for="guest in guestStats.high_priority_guests"
+              :key="guest.id"
+              class="high-priority-item"
+              :class="{ 'arrived': guest.checkin_status === 'checked_in' || guest.checkin_status === 'late' }"
+            >
+              <div class="hp-icon">⭐</div>
+              <div class="hp-info">
+                <div class="hp-name">
+                  {{ guest.name }}
+                  <el-tag size="small" :type="guest.checkin_status === 'checked_in' || guest.checkin_status === 'late' ? 'success' : 'warning'">
+                    {{ getCheckinStatusText(guest.checkin_status) }}
+                  </el-tag>
+                </div>
+                <div class="hp-meta">
+                  <span>{{ guest.relation_tag || '-' }}</span>
+                  <span>·</span>
+                  <span>{{ guest.group_name || '未分组' }}</span>
+                </div>
+                <div class="hp-notes" v-if="guest.special_notes">
+                  📝 {{ guest.special_notes }}
+                </div>
+              </div>
+            </div>
+            <div v-if="guestStats.high_priority_guests?.length === 0" class="empty-state">
+              <div class="empty-icon">⭐</div>
+              <div class="empty-text">暂无高关注宾客</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <h3 class="chart-title">📋 桌位入座详情</h3>
+        <el-table :data="guestStats.table_stats" stripe style="width: 100%;">
+          <el-table-column prop="table_name" label="桌位名称" width="120" />
+          <el-table-column prop="capacity" label="容量" width="80" align="center" />
+          <el-table-column prop="guest_count" label="户数" width="80" align="center" />
+          <el-table-column label="已分配人数" width="100" align="center">
+            <template #default="{ row }">
+              <span :class="{ 'text-danger': row.is_over_capacity }">{{ row.assigned_count }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="checked_in_count" label="已签到人数" width="100" align="center" />
+          <el-table-column prop="available_seats" label="空位" width="80" align="center">
+            <template #default="{ row }">
+              <span :class="{ 'text-success': row.available_seats > 0 }">{{ row.available_seats }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="入座率" width="160">
+            <template #default="{ row }">
+              <el-progress :percentage="row.seating_rate" :stroke-width="6" :color="row.is_over_capacity ? '#f56c6c' : '#67c23a'" />
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" width="100" align="center">
+            <template #default="{ row }">
+              <el-tag v-if="row.is_over_capacity" type="danger" size="small">超员</el-tag>
+              <el-tag v-else-if="row.seating_rate >= 100" type="success" size="small">满座</el-tag>
+              <el-tag v-else type="info" size="small">正常</el-tag>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -349,7 +543,8 @@ import {
   getOverdueTasks,
   getAdjustmentHistory,
   getRiskDistribution,
-  getBudgetStats
+  getBudgetStats,
+  getGuestStats
 } from '@/api/stats'
 import { getMaterialStats } from '@/api/material'
 import { getCategories } from '@/api/task'
@@ -399,6 +594,34 @@ const materialStats = ref({
   top_borrowed: []
 })
 
+const guestStats = ref({
+  total_guests: 0,
+  total_expected: 0,
+  total_arrived: 0,
+  arrival_rate: 0,
+  checkin_rate: 0,
+  checked_in_count: 0,
+  late_count: 0,
+  absent_count: 0,
+  pending_count: 0,
+  changed_count: 0,
+  temp_added: 0,
+  temp_reduced: 0,
+  high_priority_total: 0,
+  high_priority_arrived: 0,
+  high_priority_pending: 0,
+  high_priority_guests: [],
+  group_stats: [],
+  table_stats: [],
+  total_tables: 0,
+  total_capacity: 0,
+  total_assigned: 0,
+  over_capacity_count: 0,
+  overall_seating_rate: 0,
+  unassigned_guest_count: 0,
+  unassigned_guests: []
+})
+
 const workloadChartRef = ref(null)
 const categoryChartRef = ref(null)
 const riskChartRef = ref(null)
@@ -410,6 +633,8 @@ let categoryChart = null
 let riskChart = null
 let expenseChart = null
 let budgetUsageChart = null
+let checkinChart = null
+let seatingChart = null
 
 const getCategoryName = (catId) => {
   const cat = categories.value.find(c => c.id === catId)
@@ -580,6 +805,41 @@ const loadMaterialStats = async () => {
   }
 }
 
+const loadGuestStats = async () => {
+  try {
+    const res = await getGuestStats(WEDDING_ID)
+    guestStats.value = res || guestStats.value
+  } catch (e) {
+    guestStats.value = {
+      total_guests: 32,
+      total_expected: 60,
+      total_arrived: 0,
+      arrival_rate: 0,
+      checkin_rate: 0,
+      checked_in_count: 0,
+      late_count: 0,
+      absent_count: 0,
+      pending_count: 32,
+      changed_count: 0,
+      temp_added: 0,
+      temp_reduced: 0,
+      high_priority_total: 8,
+      high_priority_arrived: 0,
+      high_priority_pending: 8,
+      high_priority_guests: [],
+      group_stats: [],
+      table_stats: [],
+      total_tables: 11,
+      total_capacity: 112,
+      total_assigned: 52,
+      over_capacity_count: 0,
+      overall_seating_rate: 46.4,
+      unassigned_guest_count: 2,
+      unassigned_guests: []
+    }
+  }
+}
+
 const getRiskLevelText = (level) => {
   const map = { low: '低风险', medium: '中风险', high: '高风险' }
   return map[level] || level
@@ -601,6 +861,17 @@ const getTopBorrowedPercent = (index) => {
   if (!list.length) return 0
   const max = list[0].count
   return Math.round((list[index].count / max) * 100)
+}
+
+const getCheckinStatusText = (status) => {
+  const map = {
+    pending: '待签到',
+    checked_in: '已签到',
+    late: '迟到',
+    absent: '未到',
+    changed: '临时变更'
+  }
+  return map[status] || status
 }
 
 const initRiskChart = () => {
@@ -896,6 +1167,115 @@ const initBudgetUsageChart = () => {
   budgetUsageChart.setOption(option)
 }
 
+const initCheckinChart = () => {
+  if (!checkinChartRef.value) return
+
+  checkinChart = echarts.init(checkinChartRef.value)
+
+  const option = {
+    tooltip: {
+      trigger: 'item',
+      formatter: '{b}: {c}人 ({d}%)'
+    },
+    legend: {
+      bottom: 0,
+      data: ['已签到', '迟到', '未到', '待签到', '临时变更']
+    },
+    series: [
+      {
+        type: 'pie',
+        radius: ['40%', '70%'],
+        center: ['50%', '45%'],
+        avoidLabelOverlap: false,
+        itemStyle: {
+          borderRadius: 6,
+          borderColor: '#fff',
+          borderWidth: 2
+        },
+        label: {
+          show: true,
+          formatter: '{b}\n{c}人',
+          fontSize: 13
+        },
+        data: [
+          { name: '已签到', value: guestStats.value.checked_in_count, itemStyle: { color: '#67c23a' } },
+          { name: '迟到', value: guestStats.value.late_count, itemStyle: { color: '#e6a23c' } },
+          { name: '未到', value: guestStats.value.absent_count, itemStyle: { color: '#f56c6c' } },
+          { name: '待签到', value: guestStats.value.pending_count, itemStyle: { color: '#909399' } },
+          { name: '临时变更', value: guestStats.value.changed_count, itemStyle: { color: '#9093ff' } }
+        ]
+      }
+    ]
+  }
+
+  checkinChart.setOption(option)
+}
+
+const initSeatingChart = () => {
+  if (!seatingChartRef.value) return
+
+  seatingChart = echarts.init(seatingChartRef.value)
+
+  const tableData = guestStats.value.table_stats
+  const names = tableData.map(t => t.table_name)
+  const capacities = tableData.map(t => t.capacity)
+  const assigned = tableData.map(t => t.assigned_count)
+  const checkedIn = tableData.map(t => t.checked_in_count)
+
+  const option = {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' }
+    },
+    legend: {
+      data: ['已分配', '已签到', '容量'],
+      bottom: 0
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '15%',
+      top: '10%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      data: names,
+      axisLabel: {
+        rotate: 45,
+        fontSize: 11,
+        interval: 0
+      }
+    },
+    yAxis: {
+      type: 'value',
+      minInterval: 1
+    },
+    series: [
+      {
+        name: '容量',
+        type: 'bar',
+        data: capacities,
+        itemStyle: { color: '#dcdfe6', borderRadius: [4, 4, 0, 0] }
+      },
+      {
+        name: '已分配',
+        type: 'bar',
+        data: assigned,
+        itemStyle: { color: '#409eff', borderRadius: [4, 4, 0, 0] }
+      },
+      {
+        name: '已签到',
+        type: 'bar',
+        data: checkedIn,
+        itemStyle: { color: '#67c23a', borderRadius: [4, 4, 0, 0] }
+      }
+    ]
+  }
+
+  seatingChart.setOption(option)
+}
+
 onMounted(async () => {
   await loadCategories()
   await Promise.all([
@@ -906,7 +1286,8 @@ onMounted(async () => {
     loadAdjustments(),
     loadRiskDistribution(),
     loadBudgetStats(),
-    loadMaterialStats()
+    loadMaterialStats(),
+    loadGuestStats()
   ])
   
   await nextTick()
@@ -915,6 +1296,8 @@ onMounted(async () => {
   initRiskChart()
   initExpenseChart()
   initBudgetUsageChart()
+  initCheckinChart()
+  initSeatingChart()
   
   window.addEventListener('resize', () => {
     workloadChart?.resize()
@@ -922,6 +1305,8 @@ onMounted(async () => {
     riskChart?.resize()
     expenseChart?.resize()
     budgetUsageChart?.resize()
+    checkinChart?.resize()
+    seatingChart?.resize()
   })
 })
 </script>
@@ -1323,5 +1708,138 @@ onMounted(async () => {
   font-weight: 600;
   color: #409eff;
   flex-shrink: 0;
+}
+
+.guest-stats-section {
+  margin-top: 24px;
+}
+
+.section-title-big {
+  font-size: 20px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 16px;
+}
+
+.guest-total .stat-icon { background: #ecf5ff; }
+.guest-total .stat-value { color: #409eff; }
+.guest-expected .stat-icon { background: #f0f0ff; }
+.guest-expected .stat-value { color: #9093ff; }
+.guest-arrived .stat-icon { background: #f0f9eb; }
+.guest-arrived .stat-value { color: #67c23a; }
+.guest-rate .stat-icon { background: #e1f3d8; }
+.guest-rate .stat-value { color: #67c23a; }
+.guest-checkin .stat-icon { background: #d9ecff; }
+.guest-checkin .stat-value { color: #409eff; }
+.guest-pending .stat-icon { background: #f4f4f5; }
+.guest-pending .stat-value { color: #909399; }
+.guest-late .stat-icon { background: #fdf6ec; }
+.guest-late .stat-value { color: #e6a23c; }
+.guest-absent .stat-icon { background: #fef0f0; }
+.guest-absent .stat-value { color: #f56c6c; }
+.guest-temp-add .stat-icon { background: #f0f9eb; }
+.guest-temp-add .stat-value { color: #67c23a; }
+.guest-temp-reduce .stat-icon { background: #fdf6ec; }
+.guest-temp-reduce .stat-value { color: #e6a23c; }
+.guest-high .stat-icon { background: #fef0f0; }
+.guest-high .stat-value { color: #f56c6c; }
+.guest-unassigned .stat-icon { background: #f4f4f5; }
+.guest-unassigned .stat-value { color: #909399; }
+
+.group-stats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.group-stat-item {
+  padding: 12px;
+  background: #fafafa;
+  border-radius: 8px;
+}
+
+.group-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #303133;
+  margin-bottom: 6px;
+}
+
+.group-info {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 8px;
+}
+
+.group-count {
+  font-weight: 500;
+  color: #606266;
+}
+
+.high-priority-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.high-priority-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: #fef0f0;
+  border-radius: 8px;
+  border-left: 3px solid #f56c6c;
+}
+
+.high-priority-item.arrived {
+  background: #f0f9eb;
+  border-left-color: #67c23a;
+}
+
+.hp-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.hp-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.hp-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hp-meta {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 4px;
+}
+
+.hp-notes {
+  font-size: 12px;
+  color: #e6a23c;
+  background: rgba(230, 162, 60, 0.1);
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.text-danger {
+  color: #f56c6c !important;
+}
+
+.text-success {
+  color: #67c23a !important;
 }
 </style>

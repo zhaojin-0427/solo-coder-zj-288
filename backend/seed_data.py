@@ -1,4 +1,4 @@
-from models import Wedding, Bridesmaid, Task, TimelineNode, TimelineAssignment, EmergencyContact, BudgetCategory, ExpenseReimbursement, Material, MaterialBorrowing, TaskMaterial, TimelineNodeMaterial, db
+from models import Wedding, Bridesmaid, Task, TimelineNode, TimelineAssignment, EmergencyContact, BudgetCategory, ExpenseReimbursement, Material, MaterialBorrowing, TaskMaterial, TimelineNodeMaterial, Guest, Table, CheckInRecord, db
 from datetime import datetime, date, time
 
 def seed_database():
@@ -551,6 +551,82 @@ def seed_database():
                 notes=tnm_data.get('notes', '')
             )
             db.session.add(tnm)
+
+    tables_data = [
+        {'name': '主桌', 'capacity': 12, 'table_type': 'vip', 'location': '宴会厅中央', 'notes': '新人及双方父母'},
+        {'name': '第1桌', 'capacity': 10, 'table_type': 'normal', 'location': '宴会厅左侧前排', 'notes': ''},
+        {'name': '第2桌', 'capacity': 10, 'table_type': 'normal', 'location': '宴会厅左侧前排', 'notes': ''},
+        {'name': '第3桌', 'capacity': 10, 'table_type': 'normal', 'location': '宴会厅左侧中排', 'notes': ''},
+        {'name': '第4桌', 'capacity': 10, 'table_type': 'normal', 'location': '宴会厅左侧中排', 'notes': ''},
+        {'name': '第5桌', 'capacity': 10, 'table_type': 'normal', 'location': '宴会厅右侧前排', 'notes': ''},
+        {'name': '第6桌', 'capacity': 10, 'table_type': 'normal', 'location': '宴会厅右侧前排', 'notes': ''},
+        {'name': '第7桌', 'capacity': 10, 'table_type': 'normal', 'location': '宴会厅右侧中排', 'notes': ''},
+        {'name': '第8桌', 'capacity': 10, 'table_type': 'normal', 'location': '宴会厅右侧中排', 'notes': ''},
+        {'name': '第9桌', 'capacity': 10, 'table_type': 'normal', 'location': '宴会厅后排', 'notes': ''},
+        {'name': '第10桌', 'capacity': 10, 'table_type': 'normal', 'location': '宴会厅后排', 'notes': ''},
+    ]
+
+    tables = []
+    for t_data in tables_data:
+        t = Table(wedding_id=wedding.id, **t_data)
+        db.session.add(t)
+        tables.append(t)
+    db.session.flush()
+
+    table_map = {t.name: t for t in tables}
+
+    guests_data = [
+        {'name': '张建国', 'phone': '13900000001', 'group_name': '新娘家人', 'relation_tag': '父亲', 'companion_count': 1, 'table_name': '主桌', 'special_notes': '对海鲜过敏', 'is_high_priority': True},
+        {'name': '李美丽', 'phone': '13900000002', 'group_name': '新娘家人', 'relation_tag': '母亲', 'companion_count': 0, 'table_name': '主桌', 'special_notes': '高血压，需清淡饮食', 'is_high_priority': True},
+        {'name': '张卫国', 'phone': '13900000003', 'group_name': '新娘家人', 'relation_tag': '叔叔', 'companion_count': 2, 'table_name': '第1桌', 'special_notes': '', 'is_high_priority': False},
+        {'name': '张秀英', 'phone': '13900000004', 'group_name': '新娘家人', 'relation_tag': '姑姑', 'companion_count': 1, 'table_name': '第1桌', 'special_notes': '腿脚不便，需靠近通道', 'is_high_priority': True},
+        {'name': '张伟', 'phone': '13900000005', 'group_name': '新娘家人', 'relation_tag': '堂弟', 'companion_count': 1, 'table_name': '第1桌', 'special_notes': '', 'is_high_priority': False},
+        {'name': '张娜', 'phone': '13900000006', 'group_name': '新娘家人', 'relation_tag': '堂妹', 'companion_count': 0, 'table_name': '第1桌', 'special_notes': '素食主义者', 'is_high_priority': False},
+        {'name': '李国强', 'phone': '13800000001', 'group_name': '新郎家人', 'relation_tag': '父亲', 'companion_count': 1, 'table_name': '主桌', 'special_notes': '糖尿病，注意饮食', 'is_high_priority': True},
+        {'name': '王秀兰', 'phone': '13800000002', 'group_name': '新郎家人', 'relation_tag': '母亲', 'companion_count': 0, 'table_name': '主桌', 'special_notes': '心脏不好，避免嘈杂', 'is_high_priority': True},
+        {'name': '李明', 'phone': '13800000003', 'group_name': '新郎家人', 'relation_tag': '哥哥', 'companion_count': 2, 'table_name': '第5桌', 'special_notes': '带小孩，需要儿童座椅', 'is_high_priority': False},
+        {'name': '李丽', 'phone': '13800000004', 'group_name': '新郎家人', 'relation_tag': '姐姐', 'companion_count': 1, 'table_name': '第5桌', 'special_notes': '', 'is_high_priority': False},
+        {'name': '李刚', 'phone': '13800000005', 'group_name': '新郎家人', 'relation_tag': '叔叔', 'companion_count': 2, 'table_name': '第5桌', 'special_notes': '', 'is_high_priority': False},
+        {'name': '王小雨', 'phone': '13800138001', 'group_name': '伴娘团', 'relation_tag': '伴娘团长', 'companion_count': 0, 'table_name': '第2桌', 'special_notes': '当天负责签到', 'is_high_priority': True},
+        {'name': '刘思琪', 'phone': '13800138002', 'group_name': '伴娘团', 'relation_tag': '伴娘', 'companion_count': 0, 'table_name': '第2桌', 'special_notes': '', 'is_high_priority': False},
+        {'name': '陈梦瑶', 'phone': '13800138003', 'group_name': '伴娘团', 'relation_tag': '伴娘', 'companion_count': 0, 'table_name': '第2桌', 'special_notes': '', 'is_high_priority': False},
+        {'name': '杨雪婷', 'phone': '13800138004', 'group_name': '伴娘团', 'relation_tag': '伴娘', 'companion_count': 0, 'table_name': '第2桌', 'special_notes': '', 'is_high_priority': False},
+        {'name': '赵嘉怡', 'phone': '13800138005', 'group_name': '伴娘团', 'relation_tag': '伴娘', 'companion_count': 0, 'table_name': '第2桌', 'special_notes': '', 'is_high_priority': False},
+        {'name': '陈司仪', 'phone': '13600136001', 'group_name': '工作人员', 'relation_tag': '主持人', 'companion_count': 1, 'table_name': '第6桌', 'special_notes': '预留席位', 'is_high_priority': True},
+        {'name': '赵摄影', 'phone': '13500135001', 'group_name': '工作人员', 'relation_tag': '摄影师', 'companion_count': 2, 'table_name': '第6桌', 'special_notes': '预留席位', 'is_high_priority': False},
+        {'name': '王小军', 'phone': '13700001001', 'group_name': '新娘同事', 'relation_tag': '同事', 'companion_count': 1, 'table_name': '第3桌', 'special_notes': '', 'is_high_priority': False},
+        {'name': '李美玲', 'phone': '13700001002', 'group_name': '新娘同事', 'relation_tag': '同事', 'companion_count': 0, 'table_name': '第3桌', 'special_notes': '', 'is_high_priority': False},
+        {'name': '张大伟', 'phone': '13700001003', 'group_name': '新娘同事', 'relation_tag': '领导', 'companion_count': 1, 'table_name': '第3桌', 'special_notes': '公司总经理', 'is_high_priority': True},
+        {'name': '刘小芳', 'phone': '13700001004', 'group_name': '新娘同事', 'relation_tag': '同事', 'companion_count': 2, 'table_name': '第3桌', 'special_notes': '带小孩，需要儿童座椅', 'is_high_priority': False},
+        {'name': '陈志远', 'phone': '13700002001', 'group_name': '新郎同事', 'relation_tag': '同事', 'companion_count': 1, 'table_name': '第7桌', 'special_notes': '', 'is_high_priority': False},
+        {'name': '周婷婷', 'phone': '13700002002', 'group_name': '新郎同事', 'relation_tag': '同事', 'companion_count': 0, 'table_name': '第7桌', 'special_notes': '', 'is_high_priority': False},
+        {'name': '吴明辉', 'phone': '13700002003', 'group_name': '新郎同事', 'relation_tag': '领导', 'companion_count': 1, 'table_name': '第7桌', 'special_notes': '部门经理', 'is_high_priority': True},
+        {'name': '郑浩', 'phone': '13700002004', 'group_name': '新郎同事', 'relation_tag': '同事', 'companion_count': 1, 'table_name': '第7桌', 'special_notes': '', 'is_high_priority': False},
+        {'name': '孙悦', 'phone': '13700003001', 'group_name': '新娘朋友', 'relation_tag': '闺蜜', 'companion_count': 1, 'table_name': '第4桌', 'special_notes': '', 'is_high_priority': False},
+        {'name': '马晓东', 'phone': '13700003002', 'group_name': '新娘朋友', 'relation_tag': '朋友', 'companion_count': 1, 'table_name': '第4桌', 'special_notes': '', 'is_high_priority': False},
+        {'name': '朱子轩', 'phone': '13700004001', 'group_name': '新郎朋友', 'relation_tag': '兄弟', 'companion_count': 1, 'table_name': '第8桌', 'special_notes': '', 'is_high_priority': False},
+        {'name': '林浩然', 'phone': '13700004002', 'group_name': '新郎朋友', 'relation_tag': '朋友', 'companion_count': 2, 'table_name': '第8桌', 'special_notes': '', 'is_high_priority': False},
+        {'name': '黄晓雯', 'phone': '13700005001', 'group_name': '其他', 'relation_tag': '邻居', 'companion_count': 2, 'table_name': None, 'special_notes': '待确认是否出席', 'is_high_priority': False},
+        {'name': '徐大伟', 'phone': '13700005002', 'group_name': '其他', 'relation_tag': '远房亲戚', 'companion_count': 3, 'table_name': None, 'special_notes': '待确认桌位', 'is_high_priority': False},
+    ]
+
+    for g_data in guests_data:
+        table_name = g_data.pop('table_name', None)
+        table_id = table_map[table_name].id if table_name and table_name in table_map else None
+        guest = Guest(
+            wedding_id=wedding.id,
+            name=g_data['name'],
+            phone=g_data.get('phone', ''),
+            group_name=g_data.get('group_name', ''),
+            relation_tag=g_data.get('relation_tag', ''),
+            companion_count=g_data.get('companion_count', 0),
+            table_id=table_id,
+            special_notes=g_data.get('special_notes', ''),
+            is_high_priority=g_data.get('is_high_priority', False)
+        )
+        db.session.add(guest)
+
+    db.session.flush()
 
     db.session.commit()
     print('数据库初始化完成，已添加示例数据')

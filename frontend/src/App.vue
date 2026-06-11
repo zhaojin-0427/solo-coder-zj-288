@@ -23,6 +23,14 @@
             <span class="nav-icon">📅</span>
             <span>当天流程</span>
           </router-link>
+          <router-link to="/checkin" class="nav-item">
+            <span class="nav-icon">✅</span>
+            <span>现场签到</span>
+          </router-link>
+          <router-link to="/guests" class="nav-item">
+            <span class="nav-icon">👥</span>
+            <span>宾客管理</span>
+          </router-link>
           <router-link to="/production" class="nav-item">
             <span class="nav-icon">📆</span>
             <span>生产排期</span>

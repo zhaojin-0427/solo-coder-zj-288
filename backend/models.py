@@ -15,6 +15,9 @@ class Wedding(db.Model):
     timeline_nodes = db.relationship('TimelineNode', backref='wedding', lazy=True, cascade='all, delete-orphan')
     bridesmaids = db.relationship('Bridesmaid', backref='wedding', lazy=True, cascade='all, delete-orphan')
     emergency_contacts = db.relationship('EmergencyContact', backref='wedding', lazy=True, cascade='all, delete-orphan')
+    guests = db.relationship('Guest', backref='wedding', lazy=True, cascade='all, delete-orphan')
+    tables = db.relationship('Table', backref='wedding', lazy=True, cascade='all, delete-orphan')
+    checkin_records = db.relationship('CheckInRecord', backref='wedding', lazy=True, cascade='all, delete-orphan')
 
     def to_dict(self):
         return {
@@ -365,4 +368,118 @@ class MaterialBorrowing(db.Model):
             'is_abnormal': self.returned_quantity < self.borrowed_quantity if self.status == 'returned' else False,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'returned_at': self.returned_at.isoformat() if self.returned_at else None
+        }
+
+class Guest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    phone = db.Column(db.String(20))
+    group_name = db.Column(db.String(50))
+    relation_tag = db.Column(db.String(50))
+    companion_count = db.Column(db.Integer, default=0)
+    table_id = db.Column(db.Integer, db.ForeignKey('wedding_table.id'))
+    special_notes = db.Column(db.Text)
+    is_high_priority = db.Column(db.Boolean, default=False)
+    checkin_status = db.Column(db.String(20), default='pending')
+    actual_arrival_count = db.Column(db.Integer, default=0)
+    checkin_time = db.Column(db.DateTime)
+    checkin_by = db.Column(db.Integer, db.ForeignKey('bridesmaid.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    table = db.relationship('Table', backref='guests', lazy=True)
+    checkin_bridesmaid = db.relationship('Bridesmaid', backref='checked_in_guests', lazy=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'wedding_id': self.wedding_id,
+            'name': self.name,
+            'phone': self.phone,
+            'group_name': self.group_name,
+            'relation_tag': self.relation_tag,
+            'companion_count': self.companion_count,
+            'total_count': self.companion_count + 1,
+            'table_id': self.table_id,
+            'table_name': self.table.name if self.table else None,
+            'special_notes': self.special_notes,
+            'is_high_priority': self.is_high_priority,
+            'checkin_status': self.checkin_status,
+            'actual_arrival_count': self.actual_arrival_count,
+            'checkin_time': self.checkin_time.isoformat() if self.checkin_time else None,
+            'checkin_by': self.checkin_by,
+            'checkin_by_name': self.checkin_bridesmaid.name if self.checkin_bridesmaid else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+class Table(db.Model):
+    __tablename__ = 'wedding_table'
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    name = db.Column(db.String(50), nullable=False)
+    capacity = db.Column(db.Integer, default=10)
+    table_type = db.Column(db.String(20), default='normal')
+    location = db.Column(db.String(100))
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        assigned_guests = self.guests
+        assigned_count = sum(g.companion_count + 1 for g in assigned_guests)
+        checked_in_count = sum(
+            g.actual_arrival_count for g in assigned_guests 
+            if g.checkin_status in ['checked_in', 'late']
+        )
+        return {
+            'id': self.id,
+            'wedding_id': self.wedding_id,
+            'name': self.name,
+            'capacity': self.capacity,
+            'table_type': self.table_type,
+            'location': self.location,
+            'notes': self.notes,
+            'assigned_count': assigned_count,
+            'checked_in_count': checked_in_count,
+            'available_seats': self.capacity - assigned_count,
+            'is_over_capacity': assigned_count > self.capacity,
+            'guest_count': len(assigned_guests),
+            'seating_rate': round((assigned_count / self.capacity * 100) if self.capacity > 0 else 0, 1),
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+class CheckInRecord(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    guest_id = db.Column(db.Integer, db.ForeignKey('guest.id'), nullable=False)
+    checkin_type = db.Column(db.String(20), default='checkin')
+    previous_status = db.Column(db.String(20))
+    new_status = db.Column(db.String(20))
+    previous_count = db.Column(db.Integer, default=0)
+    new_count = db.Column(db.Integer, default=0)
+    count_change = db.Column(db.Integer, default=0)
+    operator_id = db.Column(db.Integer, db.ForeignKey('bridesmaid.id'))
+    remark = db.Column(db.String(500))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    guest = db.relationship('Guest', backref='checkin_records', lazy=True)
+    operator = db.relationship('Bridesmaid', backref='checkin_operations', lazy=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'wedding_id': self.wedding_id,
+            'guest_id': self.guest_id,
+            'guest_name': self.guest.name if self.guest else None,
+            'checkin_type': self.checkin_type,
+            'previous_status': self.previous_status,
+            'new_status': self.new_status,
+            'previous_count': self.previous_count,
+            'new_count': self.new_count,
+            'count_change': self.count_change,
+            'operator_id': self.operator_id,
+            'operator_name': self.operator.name if self.operator else None,
+            'remark': self.remark,
+            'created_at': self.created_at.isoformat() if self.created_at else None
         }

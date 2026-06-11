@@ -27,3 +27,7 @@ export function getRiskDistribution(weddingId) {
 export function getBudgetStats(weddingId) {
   return request.get('/stats/budget-stats', { params: { wedding_id: weddingId } })
 }
+
+export function getGuestStats(weddingId) {
+  return request.get('/stats/guest-stats', { params: { wedding_id: weddingId } })
+}

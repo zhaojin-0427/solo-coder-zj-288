@@ -51,6 +51,16 @@ const routes = [
     path: '/material',
     name: 'Material',
     component: () => import('@/views/Material.vue')
+  },
+  {
+    path: '/guests',
+    name: 'Guests',
+    component: () => import('@/views/GuestManagement.vue')
+  },
+  {
+    path: '/checkin',
+    name: 'CheckIn',
+    component: () => import('@/views/CheckIn.vue')
   }
 ]
 

@@ -24,6 +24,9 @@ from routes.stats import stats_bp
 from routes.risk import risk_bp
 from routes.budget import budget_bp
 from routes.material import material_bp
+from routes.guest import guest_bp
+from routes.table import table_bp
+from routes.checkin import checkin_bp
 
 app.register_blueprint(wedding_bp, url_prefix='/api/wedding')
 app.register_blueprint(task_bp, url_prefix='/api/tasks')
@@ -34,6 +37,9 @@ app.register_blueprint(stats_bp, url_prefix='/api/stats')
 app.register_blueprint(risk_bp, url_prefix='/api/risk')
 app.register_blueprint(budget_bp, url_prefix='/api/budget')
 app.register_blueprint(material_bp, url_prefix='/api/material')
+app.register_blueprint(guest_bp, url_prefix='/api/guests')
+app.register_blueprint(table_bp, url_prefix='/api/tables')
+app.register_blueprint(checkin_bp, url_prefix='/api/checkin')
 
 @app.route('/api/health')
 def health_check():
@@ -41,7 +47,7 @@ def health_check():
 
 if __name__ == '__main__':
     with app.app_context():
-        from models import Wedding, Bridesmaid, Task, TaskAdjustment, TimelineNode, TimelineAssignment, EmergencyContact, BudgetCategory, ExpenseReimbursement, Material, MaterialBorrowing, TaskMaterial, TimelineNodeMaterial
+        from models import Wedding, Bridesmaid, Task, TaskAdjustment, TimelineNode, TimelineAssignment, EmergencyContact, BudgetCategory, ExpenseReimbursement, Material, MaterialBorrowing, TaskMaterial, TimelineNodeMaterial, Guest, Table, CheckInRecord
         db.create_all()
         from seed_data import seed_database
         seed_database()
