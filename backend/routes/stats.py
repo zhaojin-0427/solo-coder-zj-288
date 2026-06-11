@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from models import Wedding, Task, Bridesmaid, TimelineNode, TaskAdjustment, db
+from models import Wedding, Task, Bridesmaid, TimelineNode, TaskAdjustment, BudgetCategory, ExpenseReimbursement, db
 from datetime import date, datetime
 from sqlalchemy import func
 from routes.risk import calculate_wedding_risk
@@ -214,4 +214,57 @@ def get_risk_distribution():
         'high_risk_count': risk_distribution['high'],
         'high_risk_tasks': high_risk_tasks,
         'risk_breakdown': risk_breakdown
+    })
+
+@stats_bp.route('/budget-stats', methods=['GET'])
+def get_budget_stats():
+    wedding_id = request.args.get('wedding_id', type=int)
+    
+    if not wedding_id:
+        return jsonify({'error': '缺少 wedding_id 参数'}), 400
+    
+    categories = BudgetCategory.query.filter_by(wedding_id=wedding_id).all()
+    
+    total_budget = sum(c.budget_limit for c in categories)
+    total_approved = sum(sum(e.amount for e in c.expenses if e.status == 'approved') for c in categories)
+    total_pending = sum(sum(e.amount for e in c.expenses if e.status == 'pending') for c in categories)
+    total_rejected = sum(sum(e.amount for e in c.expenses if e.status == 'rejected') for c in categories)
+    
+    over_budget_count = sum(1 for c in categories if sum(e.amount for e in c.expenses if e.status == 'approved') > c.budget_limit)
+    
+    pending_expenses = ExpenseReimbursement.query.filter_by(
+        wedding_id=wedding_id,
+        status='pending'
+    ).count()
+    
+    expense_by_category = []
+    for c in categories:
+        approved = sum(e.amount for e in c.expenses if e.status == 'approved')
+        pending = sum(e.amount for e in c.expenses if e.status == 'pending')
+        usage_rate = (approved / c.budget_limit * 100) if c.budget_limit > 0 else 0
+        expense_by_category.append({
+            'category_id': c.id,
+            'name': c.name,
+            'color': c.color,
+            'icon': c.icon,
+            'budget_limit': c.budget_limit,
+            'approved_amount': round(approved, 2),
+            'pending_amount': round(pending, 2),
+            'remaining': round(c.budget_limit - approved, 2),
+            'usage_rate': round(usage_rate, 1),
+            'is_over_budget': approved > c.budget_limit,
+            'expense_count': len(c.expenses)
+        })
+    
+    return jsonify({
+        'total_budget': round(total_budget, 2),
+        'total_approved': round(total_approved, 2),
+        'total_pending': round(total_pending, 2),
+        'total_rejected': round(total_rejected, 2),
+        'total_remaining': round(total_budget - total_approved, 2),
+        'overall_usage_rate': round((total_approved / total_budget * 100) if total_budget > 0 else 0, 1),
+        'over_budget_count': over_budget_count,
+        'pending_expense_count': pending_expenses,
+        'category_count': len(categories),
+        'expense_by_category': expense_by_category
     })

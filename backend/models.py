@@ -176,3 +176,81 @@ class EmergencyContact(db.Model):
             'is_primary': self.is_primary,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
+
+class BudgetCategory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    icon = db.Column(db.String(20))
+    color = db.Column(db.String(20))
+    budget_limit = db.Column(db.Float, default=0)
+    description = db.Column(db.Text)
+    created_by = db.Column(db.Integer, db.ForeignKey('bridesmaid.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    expenses = db.relationship('ExpenseReimbursement', backref='category', lazy=True, cascade='all, delete-orphan')
+
+    def to_dict(self):
+        approved_amount = sum(e.amount for e in self.expenses if e.status == 'approved')
+        pending_amount = sum(e.amount for e in self.expenses if e.status == 'pending')
+        remaining = self.budget_limit - approved_amount
+        return {
+            'id': self.id,
+            'wedding_id': self.wedding_id,
+            'name': self.name,
+            'icon': self.icon,
+            'color': self.color,
+            'budget_limit': self.budget_limit,
+            'description': self.description,
+            'created_by': self.created_by,
+            'approved_amount': round(approved_amount, 2),
+            'pending_amount': round(pending_amount, 2),
+            'remaining': round(remaining, 2),
+            'is_over_budget': approved_amount > self.budget_limit,
+            'usage_rate': round((approved_amount / self.budget_limit * 100) if self.budget_limit > 0 else 0, 1),
+            'expense_count': len(self.expenses),
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+class ExpenseReimbursement(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey('budget_category.id'), nullable=False)
+    task_id = db.Column(db.Integer, db.ForeignKey('task.id'))
+    amount = db.Column(db.Float, nullable=False)
+    purpose = db.Column(db.String(500), nullable=False)
+    payment_method = db.Column(db.String(50))
+    receipt_url = db.Column(db.String(500))
+    submitted_by = db.Column(db.Integer, db.ForeignKey('bridesmaid.id'), nullable=False)
+    status = db.Column(db.String(20), default='pending')
+    reviewed_by = db.Column(db.Integer, db.ForeignKey('bridesmaid.id'))
+    review_comment = db.Column(db.Text)
+    reviewed_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    task = db.relationship('Task', backref='expenses', lazy=True)
+    submitter = db.relationship('Bridesmaid', foreign_keys=[submitted_by], backref='submitted_expenses', lazy=True)
+    reviewer = db.relationship('Bridesmaid', foreign_keys=[reviewed_by], backref='reviewed_expenses', lazy=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'wedding_id': self.wedding_id,
+            'category_id': self.category_id,
+            'category_name': self.category.name if self.category else None,
+            'category_color': self.category.color if self.category else None,
+            'task_id': self.task_id,
+            'task_title': self.task.title if self.task else None,
+            'amount': self.amount,
+            'purpose': self.purpose,
+            'payment_method': self.payment_method,
+            'receipt_url': self.receipt_url,
+            'submitted_by': self.submitted_by,
+            'submitted_by_name': self.submitter.name if self.submitter else None,
+            'status': self.status,
+            'reviewed_by': self.reviewed_by,
+            'reviewed_by_name': self.reviewer.name if self.reviewer else None,
+            'review_comment': self.review_comment,
+            'reviewed_at': self.reviewed_at.isoformat() if self.reviewed_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }

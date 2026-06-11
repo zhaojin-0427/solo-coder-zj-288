@@ -1,4 +1,4 @@
-from models import Wedding, Bridesmaid, Task, TimelineNode, EmergencyContact, db
+from models import Wedding, Bridesmaid, Task, TimelineNode, EmergencyContact, BudgetCategory, ExpenseReimbursement, db
 from datetime import datetime, date, time
 
 def seed_database():
@@ -300,6 +300,129 @@ def seed_database():
     for contact_data in contacts_data:
         contact = EmergencyContact(wedding_id=wedding.id, **contact_data)
         db.session.add(contact)
+    
+    db.session.flush()
+    
+    budget_categories_data = [
+        {'name': '堵门红包', 'icon': '🧧', 'color': '#ff6b6b', 'budget_limit': 2000, 'description': '堵门游戏用的红包费用', 'created_by': bridesmaids[0].id},
+        {'name': '拍照道具', 'icon': '📸', 'color': '#4ecdc4', 'budget_limit': 800, 'description': '气球、手持道具等拍照用品', 'created_by': bridesmaids[0].id},
+        {'name': '应急物资', 'icon': '🩹', 'color': '#ffe66d', 'budget_limit': 500, 'description': '医药包、补妆用品等应急物品', 'created_by': bridesmaids[0].id},
+        {'name': '交通餐饮', 'icon': '🚗', 'color': '#95e1d3', 'budget_limit': 3000, 'description': '交通费用、餐饮费用', 'created_by': bridesmaids[0].id},
+        {'name': '场地布置', 'icon': '💐', 'color': '#f38181', 'budget_limit': 5000, 'description': '新房装饰、喜字拉花等', 'created_by': bridesmaids[0].id},
+        {'name': '物资采购', 'icon': '🛍️', 'color': '#aa96da', 'budget_limit': 8000, 'description': '喜糖、伴手礼等物资采购', 'created_by': bridesmaids[0].id},
+    ]
+    
+    budget_categories = []
+    for bc_data in budget_categories_data:
+        bc = BudgetCategory(wedding_id=wedding.id, **bc_data)
+        db.session.add(bc)
+        budget_categories.append(bc)
+    db.session.flush()
+    
+    tasks_map = {t.title: t for t in Task.query.filter_by(wedding_id=wedding.id).all()}
+    
+    expenses_data = [
+        {
+            'category_id': budget_categories[5].id,
+            'task_id': tasks_map.get('采购喜糖').id,
+            'amount': 2500,
+            'purpose': '采购喜糖500份，含包装盒',
+            'payment_method': '微信支付',
+            'submitted_by': bridesmaids[1].id,
+            'status': 'approved',
+            'reviewed_by': bridesmaids[0].id,
+            'review_comment': '票据齐全，金额合理',
+            'reviewed_at': datetime(2025, 9, 12, 10, 30)
+        },
+        {
+            'category_id': budget_categories[1].id,
+            'task_id': tasks_map.get('采购拍照道具').id,
+            'amount': 680,
+            'purpose': '气球100个、手持拍照道具20个、花环10个',
+            'payment_method': '支付宝',
+            'submitted_by': bridesmaids[1].id,
+            'status': 'approved',
+            'reviewed_by': bridesmaids[0].id,
+            'review_comment': '道具质量很好，符合预期',
+            'reviewed_at': datetime(2025, 9, 26, 14, 20)
+        },
+        {
+            'category_id': budget_categories[2].id,
+            'task_id': tasks_map.get('准备应急医药包').id,
+            'amount': 320,
+            'purpose': '创可贴、止痛药、肠胃药、晕车药、碘伏棉签等',
+            'payment_method': '现金',
+            'submitted_by': bridesmaids[3].id,
+            'status': 'approved',
+            'reviewed_by': bridesmaids[0].id,
+            'review_comment': '药品齐全，考虑周到',
+            'reviewed_at': datetime(2025, 9, 27, 9, 15)
+        },
+        {
+            'category_id': budget_categories[3].id,
+            'task_id': tasks_map.get('接亲路线踩点').id,
+            'amount': 150,
+            'purpose': '接亲路线踩点打车费用',
+            'payment_method': '微信支付',
+            'submitted_by': bridesmaids[0].id,
+            'status': 'approved',
+            'reviewed_by': bridesmaids[0].id,
+            'review_comment': '路线确认无误',
+            'reviewed_at': datetime(2025, 9, 16, 11, 0)
+        },
+        {
+            'category_id': budget_categories[0].id,
+            'task_id': tasks_map.get('准备堵门红包').id,
+            'amount': 1200,
+            'purpose': '准备50个堵门红包，面额10元、20元、50元',
+            'payment_method': '现金',
+            'submitted_by': bridesmaids[0].id,
+            'status': 'pending',
+            'reviewed_by': None,
+            'review_comment': None,
+            'reviewed_at': None
+        },
+        {
+            'category_id': budget_categories[2].id,
+            'task_id': tasks_map.get('准备补妆用品').id,
+            'amount': 280,
+            'purpose': '口红、粉饼、吸油纸、发胶等补妆用品',
+            'payment_method': '微信支付',
+            'submitted_by': bridesmaids[4].id,
+            'status': 'pending',
+            'reviewed_by': None,
+            'review_comment': None,
+            'reviewed_at': None
+        },
+        {
+            'category_id': budget_categories[4].id,
+            'task_id': None,
+            'amount': 800,
+            'purpose': '采购喜字20张、拉花10条、气球50个用于新房布置',
+            'payment_method': '淘宝',
+            'submitted_by': bridesmaids[2].id,
+            'status': 'rejected',
+            'reviewed_by': bridesmaids[0].id,
+            'review_comment': '请提供具体的购物清单和票据照片',
+            'reviewed_at': datetime(2025, 9, 28, 16, 45)
+        },
+    ]
+    
+    for exp_data in expenses_data:
+        exp = ExpenseReimbursement(
+            wedding_id=wedding.id,
+            category_id=exp_data['category_id'],
+            task_id=exp_data['task_id'],
+            amount=exp_data['amount'],
+            purpose=exp_data['purpose'],
+            payment_method=exp_data['payment_method'],
+            submitted_by=exp_data['submitted_by'],
+            status=exp_data['status'],
+            reviewed_by=exp_data['reviewed_by'],
+            review_comment=exp_data['review_comment'],
+            reviewed_at=exp_data['reviewed_at']
+        )
+        db.session.add(exp)
     
     db.session.commit()
     print('数据库初始化完成，已添加示例数据')

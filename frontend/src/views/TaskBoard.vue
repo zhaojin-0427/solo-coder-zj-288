@@ -260,6 +260,49 @@
           <el-input v-model="adjustReason" placeholder="调整原因" style="width: 200px; margin-right: 12px;" />
           <el-button type="warning" @click="adjustTask">调整</el-button>
         </div>
+
+        <div class="expenses-section">
+          <div class="section-title">
+            💰 关联费用记录
+            <span v-if="taskExpenses.length > 0" class="expense-badge">
+              {{ taskExpenses.length }} 笔
+            </span>
+          </div>
+          <div v-if="taskExpenses.length === 0" class="empty-expenses">
+            <el-empty description="暂无关联费用记录" :image-size="60" />
+          </div>
+          <div v-else class="expense-list">
+            <div
+              v-for="expense in taskExpenses"
+              :key="expense.id"
+              class="expense-item"
+            >
+              <div class="expense-header">
+                <span
+                  class="category-tag"
+                  :style="{ background: expense.category_color + '20', color: expense.category_color }"
+                >
+                  {{ expense.category_name }}
+                </span>
+                <el-tag :type="getExpenseStatusType(expense.status)" size="small" effect="dark">
+                  {{ getExpenseStatusText(expense.status) }}
+                </el-tag>
+              </div>
+              <div class="expense-info">
+                <div class="expense-purpose">{{ expense.purpose }}</div>
+                <div class="expense-amount">¥{{ expense.amount.toLocaleString() }}</div>
+              </div>
+              <div class="expense-meta">
+                <span>申请人：{{ expense.submitted_by_name }}</span>
+                <span>{{ formatDateTime(expense.created_at) }}</span>
+              </div>
+              <div v-if="expense.review_comment" class="expense-review">
+                <span class="review-label">审核备注：</span>
+                <span>{{ expense.review_comment }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </el-dialog>
 
@@ -293,6 +336,7 @@ import { Plus } from '@element-plus/icons-vue'
 import { getTasks, getCategories, createTask as apiCreateTask, claimTask as apiClaimTask, updateProgress, assignTask, uploadPhoto } from '@/api/task'
 import { getBridesmaids } from '@/api/bridesmaid'
 import { getRiskAssessment, getHighRiskTasks } from '@/api/risk'
+import { getExpenses } from '@/api/budget'
 
 const WEDDING_ID = 1
 
@@ -314,6 +358,7 @@ const claimBridesmaidId = ref(null)
 const progressValue = ref(0)
 const newAssignee = ref(null)
 const adjustReason = ref('')
+const taskExpenses = ref([])
 
 const newTask = ref({
   title: '',
@@ -364,6 +409,31 @@ const getRiskLevelText = (level) => {
 const getRiskLevelType = (level) => {
   const map = { low: 'success', medium: 'warning', high: 'danger' }
   return map[level] || 'info'
+}
+
+const getExpenseStatusText = (status) => {
+  const map = { pending: '待审核', approved: '已通过', rejected: '已驳回' }
+  return map[status] || status
+}
+
+const getExpenseStatusType = (status) => {
+  const map = { pending: 'warning', approved: 'success', rejected: 'danger' }
+  return map[status] || 'info'
+}
+
+const formatDateTime = (dateStr) => {
+  if (!dateStr) return '-'
+  return dateStr.replace('T', ' ').substring(0, 16)
+}
+
+const loadTaskExpenses = async (taskId) => {
+  try {
+    const res = await getExpenses({ task_id: taskId })
+    taskExpenses.value = res || []
+  } catch (e) {
+    console.error('加载任务费用失败', e)
+    taskExpenses.value = []
+  }
 }
 
 const loadRiskAssessment = async () => {
@@ -507,12 +577,13 @@ const confirmClaim = async () => {
   }
 }
 
-const openTaskDetail = (task) => {
+const openTaskDetail = async (task) => {
   selectedTask.value = { ...task }
   progressValue.value = task.progress
   newAssignee.value = task.assigned_to
   adjustReason.value = ''
   showDetailDialog.value = true
+  await loadTaskExpenses(task.id)
 }
 
 const handleProgressChange = () => {}
@@ -860,5 +931,93 @@ onMounted(() => {
   border-radius: 4px;
   color: white;
   font-size: 12px;
+}
+
+.expenses-section {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 8px;
+}
+
+.expense-badge {
+  display: inline-block;
+  background: #409eff;
+  color: white;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: 8px;
+  font-weight: normal;
+}
+
+.empty-expenses {
+  padding: 20px 0;
+}
+
+.expense-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.expense-item {
+  background: white;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid #ebeef5;
+}
+
+.expense-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.category-tag {
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.expense-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.expense-purpose {
+  font-size: 13px;
+  color: #303133;
+  flex: 1;
+}
+
+.expense-amount {
+  font-size: 16px;
+  font-weight: 700;
+  color: #f56c6c;
+  margin-left: 12px;
+}
+
+.expense-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #909399;
+}
+
+.expense-review {
+  margin-top: 8px;
+  padding: 8px;
+  background: #f5f7fa;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.review-label {
+  color: #909399;
 }
 </style>

@@ -23,3 +23,7 @@ export function getAdjustmentHistory(weddingId) {
 export function getRiskDistribution(weddingId) {
   return request.get('/stats/risk-distribution', { params: { wedding_id: weddingId } })
 }
+
+export function getBudgetStats(weddingId) {
+  return request.get('/stats/budget-stats', { params: { wedding_id: weddingId } })
+}

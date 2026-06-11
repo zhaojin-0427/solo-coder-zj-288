@@ -35,6 +35,10 @@
             <span class="nav-icon">📊</span>
             <span>数据统计</span>
           </router-link>
+          <router-link to="/budget" class="nav-item">
+            <span class="nav-icon">💰</span>
+            <span>预算报销</span>
+          </router-link>
         </nav>
         <div class="sidebar-footer">
           <div class="wedding-info">

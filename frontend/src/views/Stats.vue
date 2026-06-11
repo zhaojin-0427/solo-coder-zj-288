@@ -65,6 +65,43 @@
           <div class="stat-label">风险分布(高/中/低)</div>
         </div>
       </div>
+      <div class="stat-card budget-total">
+        <div class="stat-icon">💵</div>
+        <div class="stat-content">
+          <div class="stat-value">¥{{ budgetStats.total_budget?.toLocaleString() || 0 }}</div>
+          <div class="stat-label">总预算</div>
+        </div>
+      </div>
+      <div class="stat-card budget-used">
+        <div class="stat-icon">✅</div>
+        <div class="stat-content">
+          <div class="stat-value">¥{{ budgetStats.total_approved?.toLocaleString() || 0 }}</div>
+          <div class="stat-label">已报销</div>
+        </div>
+      </div>
+      <div class="stat-card budget-usage">
+        <div class="stat-icon">📊</div>
+        <div class="stat-content">
+          <div class="stat-value">{{ budgetStats.overall_usage_rate || 0 }}%</div>
+          <div class="stat-label">预算使用率</div>
+        </div>
+      </div>
+      <div class="stat-card budget-over">
+        <div class="stat-icon">⚠️</div>
+        <div class="stat-content">
+          <div class="stat-value" :class="{ 'text-danger': budgetStats.over_budget_count > 0 }">
+            {{ budgetStats.over_budget_count || 0 }}
+          </div>
+          <div class="stat-label">超支分类</div>
+        </div>
+      </div>
+      <div class="stat-card budget-pending">
+        <div class="stat-icon">⏳</div>
+        <div class="stat-content">
+          <div class="stat-value" style="color: #e6a23c;">{{ budgetStats.pending_expense_count || 0 }}</div>
+          <div class="stat-label">待审核报销</div>
+        </div>
+      </div>
     </div>
 
     <div class="charts-row">
@@ -207,6 +244,17 @@
         </el-table-column>
       </el-table>
     </div>
+
+    <div class="charts-row">
+      <div class="chart-card">
+        <h3 class="chart-title">💰 费用占比分布</h3>
+        <div ref="expenseChartRef" class="chart-container"></div>
+      </div>
+      <div class="chart-card">
+        <h3 class="chart-title">📊 预算使用率排行</h3>
+        <div ref="budgetUsageChartRef" class="chart-container"></div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -220,7 +268,8 @@ import {
   getStatsByCategory,
   getOverdueTasks,
   getAdjustmentHistory,
-  getRiskDistribution
+  getRiskDistribution,
+  getBudgetStats
 } from '@/api/stats'
 import { getCategories } from '@/api/task'
 
@@ -245,13 +294,30 @@ const riskData = ref({
   }
 })
 
+const budgetStats = ref({
+  total_budget: 0,
+  total_approved: 0,
+  total_pending: 0,
+  total_rejected: 0,
+  total_remaining: 0,
+  overall_usage_rate: 0,
+  over_budget_count: 0,
+  pending_expense_count: 0,
+  category_count: 0,
+  expense_by_category: []
+})
+
 const workloadChartRef = ref(null)
 const categoryChartRef = ref(null)
 const riskChartRef = ref(null)
+const expenseChartRef = ref(null)
+const budgetUsageChartRef = ref(null)
 
 let workloadChart = null
 let categoryChart = null
 let riskChart = null
+let expenseChart = null
+let budgetUsageChart = null
 
 const getCategoryName = (catId) => {
   const cat = categories.value.find(c => c.id === catId)
@@ -368,6 +434,33 @@ const loadRiskDistribution = async () => {
         progress_behind_risk: 1,
         material_shortage_risk: 1
       }
+    }
+  }
+}
+
+const loadBudgetStats = async () => {
+  try {
+    const res = await getBudgetStats(WEDDING_ID)
+    budgetStats.value = res || budgetStats.value
+  } catch (e) {
+    budgetStats.value = {
+      total_budget: 19300,
+      total_approved: 3650,
+      total_pending: 1480,
+      total_rejected: 800,
+      total_remaining: 15650,
+      overall_usage_rate: 18.9,
+      over_budget_count: 0,
+      pending_expense_count: 2,
+      category_count: 6,
+      expense_by_category: [
+        { name: '堵门红包', color: '#ff6b6b', approved_amount: 0, pending_amount: 1200, budget_limit: 2000, usage_rate: 0 },
+        { name: '拍照道具', color: '#4ecdc4', approved_amount: 680, pending_amount: 0, budget_limit: 800, usage_rate: 85 },
+        { name: '应急物资', color: '#ffe66d', approved_amount: 320, pending_amount: 280, budget_limit: 500, usage_rate: 64 },
+        { name: '交通餐饮', color: '#95e1d3', approved_amount: 150, pending_amount: 0, budget_limit: 3000, usage_rate: 5 },
+        { name: '场地布置', color: '#f38181', approved_amount: 0, pending_amount: 0, budget_limit: 5000, usage_rate: 0 },
+        { name: '物资采购', color: '#aa96da', approved_amount: 2500, pending_amount: 0, budget_limit: 8000, usage_rate: 31.3 }
+      ]
     }
   }
 }
@@ -562,6 +655,125 @@ const handleTask = (task) => {
   router.push('/tasks')
 }
 
+const initExpenseChart = () => {
+  if (!expenseChartRef.value) return
+
+  expenseChart = echarts.init(expenseChartRef.value)
+
+  const expenseData = budgetStats.value.expense_by_category
+    .filter(c => c.approved_amount > 0 || c.pending_amount > 0)
+    .map(c => ({
+      name: c.name,
+      value: c.approved_amount + c.pending_amount,
+      itemStyle: { color: c.color }
+    }))
+
+  const option = {
+    tooltip: {
+      trigger: 'item',
+      formatter: '{b}: ¥{c} ({d}%)'
+    },
+    legend: {
+      bottom: 0,
+      data: expenseData.map(d => d.name)
+    },
+    series: [
+      {
+        type: 'pie',
+        radius: ['40%', '70%'],
+        center: ['50%', '45%'],
+        avoidLabelOverlap: false,
+        itemStyle: {
+          borderRadius: 6,
+          borderColor: '#fff',
+          borderWidth: 2
+        },
+        label: {
+          show: true,
+          formatter: '{b}\n¥{c}',
+          fontSize: 12
+        },
+        data: expenseData
+      }
+    ]
+  }
+
+  expenseChart.setOption(option)
+}
+
+const initBudgetUsageChart = () => {
+  if (!budgetUsageChartRef.value) return
+
+  budgetUsageChart = echarts.init(budgetUsageChartRef.value)
+
+  const usageData = [...budgetStats.value.expense_by_category]
+    .sort((a, b) => b.usage_rate - a.usage_rate)
+
+  const names = usageData.map(d => d.name)
+  const usageRates = usageData.map(d => d.usage_rate)
+  const colors = usageData.map(d => d.usage_rate > 100 ? '#f56c6c' : d.color)
+
+  const option = {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: '{b}<br/>使用率: {c}%'
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '10%',
+      top: '10%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'value',
+      max: 100,
+      axisLabel: {
+        formatter: '{value}%'
+      }
+    },
+    yAxis: {
+      type: 'category',
+      data: names,
+      axisLabel: {
+        fontSize: 12
+      }
+    },
+    series: [
+      {
+        type: 'bar',
+        data: usageRates.map((value, index) => ({
+          value: Math.min(value, 100),
+          itemStyle: {
+            color: colors[index],
+            borderRadius: [0, 4, 4, 0]
+          }
+        })),
+        label: {
+          show: true,
+          position: 'right',
+          formatter: '{c}%',
+          fontSize: 12,
+          fontWeight: 600
+        },
+        markLine: {
+          silent: true,
+          lineStyle: {
+            color: '#f56c6c',
+            type: 'dashed'
+          },
+          data: [
+            { xAxis: 100, label: { formatter: '预算线', fontSize: 11 } }
+          ]
+        }
+      }
+    ]
+  }
+
+  budgetUsageChart.setOption(option)
+}
+
 onMounted(async () => {
   await loadCategories()
   await Promise.all([
@@ -570,18 +782,23 @@ onMounted(async () => {
     loadCategoryStats(),
     loadOverdueTasks(),
     loadAdjustments(),
-    loadRiskDistribution()
+    loadRiskDistribution(),
+    loadBudgetStats()
   ])
   
   await nextTick()
   initWorkloadChart()
   initCategoryChart()
   initRiskChart()
+  initExpenseChart()
+  initBudgetUsageChart()
   
   window.addEventListener('resize', () => {
     workloadChart?.resize()
     categoryChart?.resize()
     riskChart?.resize()
+    expenseChart?.resize()
+    budgetUsageChart?.resize()
   })
 })
 </script>
