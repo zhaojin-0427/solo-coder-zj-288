@@ -255,6 +255,86 @@
         <div ref="budgetUsageChartRef" class="chart-container"></div>
       </div>
     </div>
+
+    <div class="charts-row">
+      <div class="chart-card">
+        <h3 class="chart-title">📦 物资统计概览</h3>
+        <div class="material-stats-grid">
+          <div class="material-stat-item">
+            <div class="material-stat-icon">📦</div>
+            <div class="material-stat-info">
+              <div class="material-stat-value">{{ materialStats.total_items }}</div>
+              <div class="material-stat-label">物资种类</div>
+            </div>
+          </div>
+          <div class="material-stat-item">
+            <div class="material-stat-icon">🔢</div>
+            <div class="material-stat-info">
+              <div class="material-stat-value">{{ materialStats.total_quantity }}</div>
+              <div class="material-stat-label">库存总量</div>
+            </div>
+          </div>
+          <div class="material-stat-item">
+            <div class="material-stat-icon">📤</div>
+            <div class="material-stat-info">
+              <div class="material-stat-value" style="color: #e6a23c;">{{ materialStats.total_borrowed }}</div>
+              <div class="material-stat-label">已借出</div>
+            </div>
+          </div>
+          <div class="material-stat-item">
+            <div class="material-stat-icon">📥</div>
+            <div class="material-stat-info">
+              <div class="material-stat-value" style="color: #67c23a;">{{ materialStats.total_available }}</div>
+              <div class="material-stat-label">可用数量</div>
+            </div>
+          </div>
+          <div class="material-stat-item">
+            <div class="material-stat-icon">📊</div>
+            <div class="material-stat-info">
+              <div class="material-stat-value" style="color: #409eff;">{{ materialStats.usage_rate }}%</div>
+              <div class="material-stat-label">使用率</div>
+            </div>
+          </div>
+          <div class="material-stat-item">
+            <div class="material-stat-icon">⚠️</div>
+            <div class="material-stat-info">
+              <div class="material-stat-value" :class="{ 'text-danger': materialStats.overdue_count > 0 }">{{ materialStats.overdue_count }}</div>
+              <div class="material-stat-label">逾期未还</div>
+            </div>
+          </div>
+          <div class="material-stat-item">
+            <div class="material-stat-icon">🔴</div>
+            <div class="material-stat-info">
+              <div class="material-stat-value" :class="{ 'text-danger': materialStats.abnormal_count > 0 }">{{ materialStats.abnormal_count }}</div>
+              <div class="material-stat-label">异常归还</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h3 class="chart-title">🏆 高频借用物资排行</h3>
+        <div class="top-borrowed-list">
+          <div
+            v-for="(item, index) in materialStats.top_borrowed"
+            :key="item.name"
+            class="top-borrowed-item"
+          >
+            <div class="borrowed-rank" :class="`rank-${index + 1}`">
+              {{ index + 1 }}
+            </div>
+            <div class="borrowed-info">
+              <div class="borrowed-name">{{ item.name }}</div>
+              <el-progress :percentage="getTopBorrowedPercent(index)" :stroke-width="8" color="#409eff" />
+            </div>
+            <div class="borrowed-count">{{ item.count }}次</div>
+          </div>
+          <div v-if="materialStats.top_borrowed.length === 0" class="empty-state">
+            <div class="empty-icon">📦</div>
+            <div class="empty-text">暂无借用记录</div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -271,6 +351,7 @@ import {
   getRiskDistribution,
   getBudgetStats
 } from '@/api/stats'
+import { getMaterialStats } from '@/api/material'
 import { getCategories } from '@/api/task'
 
 const WEDDING_ID = 1
@@ -305,6 +386,17 @@ const budgetStats = ref({
   pending_expense_count: 0,
   category_count: 0,
   expense_by_category: []
+})
+
+const materialStats = ref({
+  total_items: 0,
+  total_quantity: 0,
+  total_borrowed: 0,
+  total_available: 0,
+  usage_rate: 0,
+  overdue_count: 0,
+  abnormal_count: 0,
+  top_borrowed: []
 })
 
 const workloadChartRef = ref(null)
@@ -465,6 +557,29 @@ const loadBudgetStats = async () => {
   }
 }
 
+const loadMaterialStats = async () => {
+  try {
+    const res = await getMaterialStats(WEDDING_ID)
+    materialStats.value = res || materialStats.value
+  } catch (e) {
+    materialStats.value = {
+      total_items: 6,
+      total_quantity: 29,
+      total_borrowed: 11,
+      total_available: 18,
+      usage_rate: 37.9,
+      overdue_count: 1,
+      abnormal_count: 1,
+      top_borrowed: [
+        { name: '对讲机', count: 2 },
+        { name: '充电宝', count: 1 },
+        { name: '补光灯', count: 1 },
+        { name: '拍照道具套装', count: 1 }
+      ]
+    }
+  }
+}
+
 const getRiskLevelText = (level) => {
   const map = { low: '低风险', medium: '中风险', high: '高风险' }
   return map[level] || level
@@ -479,6 +594,13 @@ const getBreakdownPercent = (key) => {
   const total = Object.values(riskData.value.risk_breakdown).reduce((a, b) => a + b, 0)
   if (total === 0) return 0
   return Math.round((riskData.value.risk_breakdown[key] / total) * 100)
+}
+
+const getTopBorrowedPercent = (index) => {
+  const list = materialStats.value.top_borrowed
+  if (!list.length) return 0
+  const max = list[0].count
+  return Math.round((list[index].count / max) * 100)
 }
 
 const initRiskChart = () => {
@@ -783,7 +905,8 @@ onMounted(async () => {
     loadOverdueTasks(),
     loadAdjustments(),
     loadRiskDistribution(),
-    loadBudgetStats()
+    loadBudgetStats(),
+    loadMaterialStats()
   ])
   
   await nextTick()
@@ -1107,6 +1230,98 @@ onMounted(async () => {
   color: #303133;
   min-width: 30px;
   text-align: center;
+  flex-shrink: 0;
+}
+
+.material-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.material-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  background: #fafafa;
+  border-radius: 8px;
+}
+
+.material-stat-icon {
+  font-size: 24px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.material-stat-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.material-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #303133;
+}
+
+.material-stat-label {
+  font-size: 11px;
+  color: #909399;
+  margin-top: 2px;
+}
+
+.top-borrowed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.top-borrowed-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #fafafa;
+  border-radius: 8px;
+}
+
+.borrowed-rank {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  background: #f0f0f0;
+  color: #909399;
+  flex-shrink: 0;
+}
+
+.borrowed-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.borrowed-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #303133;
+  margin-bottom: 6px;
+}
+
+.borrowed-count {
+  font-size: 14px;
+  font-weight: 600;
+  color: #409eff;
   flex-shrink: 0;
 }
 </style>

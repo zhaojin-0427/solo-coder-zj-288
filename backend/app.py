@@ -23,6 +23,7 @@ from routes.emergency import emergency_bp
 from routes.stats import stats_bp
 from routes.risk import risk_bp
 from routes.budget import budget_bp
+from routes.material import material_bp
 
 app.register_blueprint(wedding_bp, url_prefix='/api/wedding')
 app.register_blueprint(task_bp, url_prefix='/api/tasks')
@@ -32,6 +33,7 @@ app.register_blueprint(emergency_bp, url_prefix='/api/emergency')
 app.register_blueprint(stats_bp, url_prefix='/api/stats')
 app.register_blueprint(risk_bp, url_prefix='/api/risk')
 app.register_blueprint(budget_bp, url_prefix='/api/budget')
+app.register_blueprint(material_bp, url_prefix='/api/material')
 
 @app.route('/api/health')
 def health_check():
@@ -39,7 +41,7 @@ def health_check():
 
 if __name__ == '__main__':
     with app.app_context():
-        from models import Wedding, Bridesmaid, Task, TaskAdjustment, TimelineNode, TimelineAssignment, EmergencyContact, BudgetCategory, ExpenseReimbursement
+        from models import Wedding, Bridesmaid, Task, TaskAdjustment, TimelineNode, TimelineAssignment, EmergencyContact, BudgetCategory, ExpenseReimbursement, Material, MaterialBorrowing, TaskMaterial, TimelineNodeMaterial
         db.create_all()
         from seed_data import seed_database
         seed_database()

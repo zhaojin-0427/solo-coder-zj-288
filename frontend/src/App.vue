@@ -39,6 +39,10 @@
             <span class="nav-icon">💰</span>
             <span>预算报销</span>
           </router-link>
+          <router-link to="/material" class="nav-item">
+            <span class="nav-icon">📦</span>
+            <span>物资追踪</span>
+          </router-link>
         </nav>
         <div class="sidebar-footer">
           <div class="wedding-info">

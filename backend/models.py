@@ -69,6 +69,7 @@ class Task(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     adjustments = db.relationship('TaskAdjustment', backref='task', lazy=True, cascade='all, delete-orphan')
+    material_links = db.relationship('TaskMaterial', backref='task', lazy=True, cascade='all, delete-orphan')
 
     def to_dict(self):
         assigned_name = None
@@ -90,6 +91,7 @@ class Task(db.Model):
             'notes': self.notes,
             'is_overdue': self.is_overdue,
             'adjustment_count': len(self.adjustments),
+            'linked_materials': [ml.to_dict() for ml in self.material_links],
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
@@ -125,6 +127,7 @@ class TimelineNode(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     assignments = db.relationship('TimelineAssignment', backref='timeline_node', lazy=True, cascade='all, delete-orphan')
+    material_links = db.relationship('TimelineNodeMaterial', backref='timeline_node', lazy=True, cascade='all, delete-orphan')
 
     def to_dict(self):
         assigned_bridesmaids = [a.bridesmaid.to_dict() for a in self.assignments]
@@ -139,6 +142,7 @@ class TimelineNode(db.Model):
             'status': self.status,
             'order_index': self.order_index,
             'assigned_bridesmaids': assigned_bridesmaids,
+            'linked_materials': [ml.to_dict() for ml in self.material_links],
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
 
@@ -254,4 +258,111 @@ class ExpenseReimbursement(db.Model):
             'review_comment': self.review_comment,
             'reviewed_at': self.reviewed_at.isoformat() if self.reviewed_at else None,
             'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+class TaskMaterial(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=False)
+    material_id = db.Column(db.Integer, db.ForeignKey('material.id'), nullable=False)
+    quantity_needed = db.Column(db.Integer, default=1)
+    notes = db.Column(db.String(500))
+
+    material = db.relationship('Material', backref='task_links', lazy=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'task_id': self.task_id,
+            'material_id': self.material_id,
+            'material_name': self.material.name if self.material else None,
+            'quantity_needed': self.quantity_needed,
+            'notes': self.notes
+        }
+
+class TimelineNodeMaterial(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    timeline_node_id = db.Column(db.Integer, db.ForeignKey('timeline_node.id'), nullable=False)
+    material_id = db.Column(db.Integer, db.ForeignKey('material.id'), nullable=False)
+    quantity_needed = db.Column(db.Integer, default=1)
+    notes = db.Column(db.String(500))
+
+    material = db.relationship('Material', backref='timeline_links', lazy=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'timeline_node_id': self.timeline_node_id,
+            'material_id': self.material_id,
+            'material_name': self.material.name if self.material else None,
+            'quantity_needed': self.quantity_needed,
+            'notes': self.notes
+        }
+
+class Material(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    name = db.Column(db.String(200), nullable=False)
+    total_quantity = db.Column(db.Integer, nullable=False, default=1)
+    storage_location = db.Column(db.String(200))
+    person_in_charge = db.Column(db.Integer, db.ForeignKey('bridesmaid.id'))
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    borrowings = db.relationship('MaterialBorrowing', backref='material', lazy=True, cascade='all, delete-orphan')
+
+    def to_dict(self):
+        borrowed_quantity = sum(b.borrowed_quantity - b.returned_quantity for b in self.borrowings if b.status != 'returned')
+        overdue_count = sum(1 for b in self.borrowings if b.status == 'overdue')
+        return {
+            'id': self.id,
+            'wedding_id': self.wedding_id,
+            'name': self.name,
+            'total_quantity': self.total_quantity,
+            'borrowed_quantity': borrowed_quantity,
+            'available_quantity': self.total_quantity - borrowed_quantity,
+            'storage_location': self.storage_location,
+            'person_in_charge': self.person_in_charge,
+            'person_in_charge_name': self._get_charge_name(),
+            'notes': self.notes,
+            'overdue_count': overdue_count,
+            'borrowing_count': len(self.borrowings),
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+    def _get_charge_name(self):
+        if self.person_in_charge:
+            bm = Bridesmaid.query.get(self.person_in_charge)
+            return bm.name if bm else None
+        return None
+
+class MaterialBorrowing(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    material_id = db.Column(db.Integer, db.ForeignKey('material.id'), nullable=False)
+    wedding_id = db.Column(db.Integer, db.ForeignKey('wedding.id'), nullable=False)
+    borrower_name = db.Column(db.String(100), nullable=False)
+    borrowed_quantity = db.Column(db.Integer, nullable=False, default=1)
+    purpose = db.Column(db.String(500))
+    expected_return_time = db.Column(db.DateTime)
+    status = db.Column(db.String(20), default='borrowed')
+    returned_quantity = db.Column(db.Integer, default=0)
+    abnormal_note = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    returned_at = db.Column(db.DateTime)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'material_id': self.material_id,
+            'material_name': self.material.name if self.material else None,
+            'wedding_id': self.wedding_id,
+            'borrower_name': self.borrower_name,
+            'borrowed_quantity': self.borrowed_quantity,
+            'purpose': self.purpose,
+            'expected_return_time': self.expected_return_time.isoformat() if self.expected_return_time else None,
+            'status': self.status,
+            'returned_quantity': self.returned_quantity,
+            'abnormal_note': self.abnormal_note,
+            'is_abnormal': self.returned_quantity < self.borrowed_quantity if self.status == 'returned' else False,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'returned_at': self.returned_at.isoformat() if self.returned_at else None
         }

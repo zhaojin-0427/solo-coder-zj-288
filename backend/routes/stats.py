@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from models import Wedding, Task, Bridesmaid, TimelineNode, TaskAdjustment, BudgetCategory, ExpenseReimbursement, db
+from models import Wedding, Task, Bridesmaid, TimelineNode, TaskAdjustment, BudgetCategory, ExpenseReimbursement, Material, MaterialBorrowing, db
 from datetime import date, datetime
 from sqlalchemy import func
 from routes.risk import calculate_wedding_risk
@@ -269,4 +269,43 @@ def get_budget_stats():
         'pending_expense_count': pending_expenses,
         'category_count': len(categories),
         'expense_by_category': expense_by_category
+    })
+
+@stats_bp.route('/material-stats', methods=['GET'])
+def get_material_stats():
+    wedding_id = request.args.get('wedding_id', type=int)
+
+    if not wedding_id:
+        return jsonify({'error': '缺少 wedding_id 参数'}), 400
+
+    materials = Material.query.filter_by(wedding_id=wedding_id).all()
+    borrowings = MaterialBorrowing.query.filter_by(wedding_id=wedding_id).all()
+
+    total_items = len(materials)
+    total_quantity = sum(m.total_quantity for m in materials)
+    total_borrowed = sum(m.to_dict()['borrowed_quantity'] for m in materials)
+    total_available = total_quantity - total_borrowed
+
+    usage_rate = round((total_borrowed / total_quantity * 100) if total_quantity > 0 else 0, 1)
+
+    overdue_count = sum(1 for b in borrowings if b.status == 'overdue')
+    abnormal_count = sum(1 for b in borrowings if b.status == 'returned' and b.returned_quantity < b.borrowed_quantity)
+
+    material_borrow_counts = {}
+    for b in borrowings:
+        name = b.material.name if b.material else '未知'
+        material_borrow_counts[name] = material_borrow_counts.get(name, 0) + 1
+
+    top_materials = sorted(material_borrow_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+    top_borrowed = [{'name': name, 'count': count} for name, count in top_materials]
+
+    return jsonify({
+        'total_items': total_items,
+        'total_quantity': total_quantity,
+        'total_borrowed': total_borrowed,
+        'total_available': total_available,
+        'usage_rate': usage_rate,
+        'overdue_count': overdue_count,
+        'abnormal_count': abnormal_count,
+        'top_borrowed': top_borrowed
     })

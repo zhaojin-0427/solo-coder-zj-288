@@ -1,4 +1,4 @@
-from models import Wedding, Bridesmaid, Task, TimelineNode, EmergencyContact, BudgetCategory, ExpenseReimbursement, db
+from models import Wedding, Bridesmaid, Task, TimelineNode, TimelineAssignment, EmergencyContact, BudgetCategory, ExpenseReimbursement, Material, MaterialBorrowing, TaskMaterial, TimelineNodeMaterial, db
 from datetime import datetime, date, time
 
 def seed_database():
@@ -423,6 +423,134 @@ def seed_database():
             reviewed_at=exp_data['reviewed_at']
         )
         db.session.add(exp)
-    
+
+    db.session.flush()
+
+    materials_data = [
+        {'name': '对讲机', 'total_quantity': 6, 'storage_location': '新娘房·储物柜A', 'person_in_charge': bridesmaids[0].id, 'notes': '婚礼当天各组通讯使用'},
+        {'name': '充电宝', 'total_quantity': 10, 'storage_location': '新娘房·储物柜B', 'person_in_charge': bridesmaids[1].id, 'notes': '满电状态备用'},
+        {'name': '补光灯', 'total_quantity': 3, 'storage_location': '宴会厅·舞台侧', 'person_in_charge': bridesmaids[2].id, 'notes': '拍照补光使用'},
+        {'name': '拍照道具套装', 'total_quantity': 5, 'storage_location': '新娘房·道具箱', 'person_in_charge': bridesmaids[1].id, 'notes': '含手持牌、气球、花环等'},
+        {'name': '应急药箱', 'total_quantity': 2, 'storage_location': '新娘房·随身包', 'person_in_charge': bridesmaids[3].id, 'notes': '创可贴、止痛药、肠胃药等'},
+        {'name': '备用高跟鞋', 'total_quantity': 3, 'storage_location': '新娘房·鞋柜', 'person_in_charge': bridesmaids[4].id, 'notes': '37码1双、38码2双'},
+    ]
+
+    materials = []
+    for mat_data in materials_data:
+        mat = Material(wedding_id=wedding.id, **mat_data)
+        db.session.add(mat)
+        materials.append(mat)
+    db.session.flush()
+
+    borrowings_data = [
+        {
+            'material_id': materials[0].id,
+            'borrower_name': '刘思琪',
+            'borrowed_quantity': 2,
+            'purpose': '接亲车队协调通讯',
+            'expected_return_time': datetime(2025, 10, 1, 14, 0),
+            'status': 'returned',
+            'returned_quantity': 2,
+            'returned_at': datetime(2025, 10, 1, 13, 30)
+        },
+        {
+            'material_id': materials[0].id,
+            'borrower_name': '杨雪婷',
+            'borrowed_quantity': 1,
+            'purpose': '宴会厅现场协调',
+            'expected_return_time': datetime(2025, 10, 1, 15, 0),
+            'status': 'borrowed',
+            'returned_quantity': 0
+        },
+        {
+            'material_id': materials[1].id,
+            'borrower_name': '陈梦瑶',
+            'borrowed_quantity': 3,
+            'purpose': '拍照手机充电',
+            'expected_return_time': datetime(2025, 10, 1, 13, 0),
+            'status': 'returned',
+            'returned_quantity': 2,
+            'abnormal_note': '1个充电宝丢失，已赔偿',
+            'returned_at': datetime(2025, 10, 1, 14, 0)
+        },
+        {
+            'material_id': materials[2].id,
+            'borrower_name': '赵摄影',
+            'borrowed_quantity': 2,
+            'purpose': '宴会厅拍照补光',
+            'expected_return_time': datetime(2025, 10, 1, 12, 0),
+            'status': 'overdue',
+            'returned_quantity': 0
+        },
+        {
+            'material_id': materials[3].id,
+            'borrower_name': '陈梦瑶',
+            'borrowed_quantity': 3,
+            'purpose': '伴娘团合影拍摄',
+            'expected_return_time': datetime(2025, 10, 1, 14, 0),
+            'status': 'borrowed',
+            'returned_quantity': 0
+        },
+    ]
+
+    for bor_data in borrowings_data:
+        bor = MaterialBorrowing(
+            wedding_id=wedding.id,
+            material_id=bor_data['material_id'],
+            borrower_name=bor_data['borrower_name'],
+            borrowed_quantity=bor_data['borrowed_quantity'],
+            purpose=bor_data['purpose'],
+            expected_return_time=bor_data['expected_return_time'],
+            status=bor_data['status'],
+            returned_quantity=bor_data['returned_quantity'],
+            abnormal_note=bor_data.get('abnormal_note', ''),
+            returned_at=bor_data.get('returned_at')
+        )
+        db.session.add(bor)
+
+    db.session.flush()
+
+    tasks_map = {t.title: t for t in Task.query.filter_by(wedding_id=wedding.id).all()}
+    timeline_map = {t.title: t for t in TimelineNode.query.filter_by(wedding_id=wedding.id).all()}
+    materials_map = {m.name: m for m in Material.query.filter_by(wedding_id=wedding.id).all()}
+
+    task_materials_data = [
+        {'task_title': '采购拍照道具', 'material_name': '拍照道具套装', 'quantity_needed': 5, 'notes': '全部拍照道具'},
+        {'task_title': '准备应急医药包', 'material_name': '应急药箱', 'quantity_needed': 2, 'notes': '应急使用'},
+        {'task_title': '准备补妆用品', 'material_name': '补光灯', 'quantity_needed': 1, 'notes': '补光补妆'},
+    ]
+
+    for tm_data in task_materials_data:
+        task = tasks_map.get(tm_data['task_title'])
+        mat = materials_map.get(tm_data['material_name'])
+        if task and mat:
+            tm = TaskMaterial(
+                task_id=task.id,
+                material_id=mat.id,
+                quantity_needed=tm_data['quantity_needed'],
+                notes=tm_data.get('notes', '')
+            )
+            db.session.add(tm)
+
+    timeline_materials_data = [
+        {'timeline_title': '堵门游戏', 'material_name': '对讲机', 'quantity_needed': 3, 'notes': '堵门协调通讯'},
+        {'timeline_title': '婚礼仪式', 'material_name': '对讲机', 'quantity_needed': 4, 'notes': '仪式现场协调'},
+        {'timeline_title': '婚礼仪式', 'material_name': '补光灯', 'quantity_needed': 2, 'notes': '仪式现场补光'},
+        {'timeline_title': '迎宾', 'material_name': '充电宝', 'quantity_needed': 3, 'notes': '迎宾签到充电'},
+        {'timeline_title': '婚宴开始', 'material_name': '备用高跟鞋', 'quantity_needed': 1, 'notes': '敬酒备用'},
+    ]
+
+    for tnm_data in timeline_materials_data:
+        node = timeline_map.get(tnm_data['timeline_title'])
+        mat = materials_map.get(tnm_data['material_name'])
+        if node and mat:
+            tnm = TimelineNodeMaterial(
+                timeline_node_id=node.id,
+                material_id=mat.id,
+                quantity_needed=tnm_data['quantity_needed'],
+                notes=tnm_data.get('notes', '')
+            )
+            db.session.add(tnm)
+
     db.session.commit()
     print('数据库初始化完成，已添加示例数据')
