@@ -1,0 +1,305 @@
+from models import Wedding, Bridesmaid, Task, TimelineNode, EmergencyContact, db
+from datetime import datetime, date, time
+
+def seed_database():
+    if Wedding.query.first():
+        return
+    
+    wedding = Wedding(
+        bride_name='张美丽',
+        groom_name='李英俊',
+        wedding_date=date(2025, 10, 1),
+        venue='喜来登大酒店 · 宴会厅',
+        description='一场浪漫温馨的婚礼，邀请伴娘团共同参与筹备'
+    )
+    db.session.add(wedding)
+    db.session.flush()
+    
+    bridesmaids_data = [
+        {'name': '王小雨', 'phone': '13800138001', 'role': 'leader', 'avatar': '👩‍🦰'},
+        {'name': '刘思琪', 'phone': '13800138002', 'role': 'member', 'avatar': '👩‍🦱'},
+        {'name': '陈梦瑶', 'phone': '13800138003', 'role': 'member', 'avatar': '👩'},
+        {'name': '杨雪婷', 'phone': '13800138004', 'role': 'member', 'avatar': '👩‍🦳'},
+        {'name': '赵嘉怡', 'phone': '13800138005', 'role': 'member', 'avatar': '👩‍🦲'},
+    ]
+    
+    bridesmaids = []
+    for bm_data in bridesmaids_data:
+        bm = Bridesmaid(
+            wedding_id=wedding.id,
+            name=bm_data['name'],
+            phone=bm_data['phone'],
+            role=bm_data['role'],
+            avatar=bm_data['avatar']
+        )
+        db.session.add(bm)
+        bridesmaids.append(bm)
+    db.session.flush()
+    
+    tasks_data = [
+        {
+            'title': '设计堵门游戏方案',
+            'description': '准备3-5个有趣的堵门游戏，包括道具和游戏规则',
+            'category': 'door_game',
+            'priority': 'high',
+            'due_date': date(2025, 9, 20),
+            'status': 'in_progress',
+            'progress': 60,
+            'assigned_to': bridesmaids[0].id
+        },
+        {
+            'title': '准备堵门红包',
+            'description': '准备不同面额的堵门红包，预计50个左右',
+            'category': 'door_game',
+            'priority': 'medium',
+            'due_date': date(2025, 9, 28),
+            'status': 'pending',
+            'progress': 0
+        },
+        {
+            'title': '采购拍照道具',
+            'description': '气球、手持拍照道具、花环、墨镜等创意拍照道具',
+            'category': 'photo_props',
+            'priority': 'medium',
+            'due_date': date(2025, 9, 25),
+            'status': 'completed',
+            'progress': 100,
+            'assigned_to': bridesmaids[1].id
+        },
+        {
+            'title': '整理拍照pose清单',
+            'description': '收集整理适合婚礼当天的拍照姿势和造型',
+            'category': 'photo_props',
+            'priority': 'low',
+            'due_date': date(2025, 9, 28),
+            'status': 'in_progress',
+            'progress': 40,
+            'assigned_to': bridesmaids[2].id
+        },
+        {
+            'title': '准备应急医药包',
+            'description': '创可贴、止痛药、肠胃药、晕车药、碘伏棉签等',
+            'category': 'emergency_kit',
+            'priority': 'high',
+            'due_date': date(2025, 9, 26),
+            'status': 'completed',
+            'progress': 100,
+            'assigned_to': bridesmaids[3].id
+        },
+        {
+            'title': '准备补妆用品',
+            'description': '口红、粉饼、吸油纸、发胶等补妆用品',
+            'category': 'emergency_kit',
+            'priority': 'medium',
+            'due_date': date(2025, 9, 28),
+            'status': 'in_progress',
+            'progress': 70,
+            'assigned_to': bridesmaids[4].id
+        },
+        {
+            'title': '接亲路线踩点',
+            'description': '提前走一遍接亲路线，计算时间，确认路况',
+            'category': 'route_check',
+            'priority': 'high',
+            'due_date': date(2025, 9, 15),
+            'status': 'completed',
+            'progress': 100,
+            'assigned_to': bridesmaids[0].id
+        },
+        {
+            'title': '确认酒店停车位',
+            'description': '确认酒店停车位数量和位置，制作停车指引',
+            'category': 'route_check',
+            'priority': 'medium',
+            'due_date': date(2025, 9, 20),
+            'status': 'pending',
+            'progress': 0
+        },
+        {
+            'title': '新房气球布置',
+            'description': '用气球和鲜花装饰新房，营造浪漫氛围',
+            'category': 'decoration',
+            'priority': 'medium',
+            'due_date': date(2025, 9, 30),
+            'status': 'pending',
+            'progress': 0
+        },
+        {
+            'title': '婚房喜字贴放',
+            'description': '确认喜字、拉花的位置和数量，提前贴好',
+            'category': 'decoration',
+            'priority': 'low',
+            'due_date': date(2025, 9, 29),
+            'status': 'pending',
+            'progress': 0
+        },
+        {
+            'title': '采购喜糖',
+            'description': '根据宾客数量采购喜糖，准备包装盒',
+            'category': 'logistics',
+            'priority': 'high',
+            'due_date': date(2025, 9, 10),
+            'status': 'completed',
+            'progress': 100,
+            'assigned_to': bridesmaids[1].id
+        },
+        {
+            'title': '整理伴手礼',
+            'description': '将伴手礼装袋整理，按桌数分配',
+            'category': 'logistics',
+            'priority': 'medium',
+            'due_date': date(2025, 9, 28),
+            'status': 'in_progress',
+            'progress': 50,
+            'assigned_to': bridesmaids[2].id
+        },
+    ]
+    
+    for task_data in tasks_data:
+        task = Task(wedding_id=wedding.id, **task_data)
+        db.session.add(task)
+    db.session.flush()
+    
+    timeline_data = [
+        {
+            'title': '新娘化妆',
+            'description': '化妆师到达，开始新娘妆发造型',
+            'start_time': time(5, 30),
+            'end_time': time(7, 30),
+            'location': '新娘家',
+            'order_index': 0,
+            'status': 'upcoming',
+            'assignees': [bridesmaids[0].id]
+        },
+        {
+            'title': '摄影师到达',
+            'description': '摄影师到达新娘家，开始拍摄准备过程',
+            'start_time': time(7, 0),
+            'end_time': time(7, 30),
+            'location': '新娘家',
+            'order_index': 1,
+            'status': 'upcoming',
+            'assignees': []
+        },
+        {
+            'title': '迎亲车队出发',
+            'description': '新郎带领迎亲车队从新郎家出发',
+            'start_time': time(7, 30),
+            'end_time': time(8, 0),
+            'location': '新郎家',
+            'order_index': 2,
+            'status': 'upcoming',
+            'assignees': [bridesmaids[1].id]
+        },
+        {
+            'title': '堵门游戏',
+            'description': '伴娘团设置堵门关卡，新郎闯关接新娘',
+            'start_time': time(8, 0),
+            'end_time': time(9, 0),
+            'location': '新娘家',
+            'order_index': 3,
+            'status': 'upcoming',
+            'assignees': [bridesmaids[0].id, bridesmaids[2].id, bridesmaids[3].id, bridesmaids[4].id]
+        },
+        {
+            'title': '敬茶改口',
+            'description': '新人向双方父母敬茶，改口叫爸妈',
+            'start_time': time(9, 0),
+            'end_time': time(9, 30),
+            'location': '新娘家',
+            'order_index': 4,
+            'status': 'upcoming',
+            'assignees': [bridesmaids[0].id]
+        },
+        {
+            'title': '出发去酒店',
+            'description': '新人及亲友出发前往婚礼酒店',
+            'start_time': time(9, 30),
+            'end_time': time(10, 0),
+            'location': '前往酒店途中',
+            'order_index': 5,
+            'status': 'upcoming',
+            'assignees': [bridesmaids[1].id, bridesmaids[2].id]
+        },
+        {
+            'title': '迎宾',
+            'description': '新人在酒店门口迎接宾客',
+            'start_time': time(10, 0),
+            'end_time': time(11, 0),
+            'location': '酒店大堂',
+            'order_index': 6,
+            'status': 'upcoming',
+            'assignees': [bridesmaids[3].id, bridesmaids[4].id]
+        },
+        {
+            'title': '婚礼仪式',
+            'description': '正式婚礼仪式，包括入场、交换戒指、宣誓等',
+            'start_time': time(11, 8),
+            'end_time': time(12, 0),
+            'location': '宴会厅',
+            'order_index': 7,
+            'status': 'upcoming',
+            'assignees': [bridesmaids[0].id, bridesmaids[1].id, bridesmaids[2].id, bridesmaids[3].id, bridesmaids[4].id]
+        },
+        {
+            'title': '婚宴开始',
+            'description': '宾客用餐，新人逐桌敬酒',
+            'start_time': time(12, 0),
+            'end_time': time(14, 0),
+            'location': '宴会厅',
+            'order_index': 8,
+            'status': 'upcoming',
+            'assignees': [bridesmaids[0].id, bridesmaids[2].id]
+        },
+        {
+            'title': '游戏互动',
+            'description': '婚宴中的游戏互动环节',
+            'start_time': time(13, 0),
+            'end_time': time(13, 30),
+            'location': '宴会厅',
+            'order_index': 9,
+            'status': 'upcoming',
+            'assignees': [bridesmaids[1].id, bridesmaids[3].id]
+        },
+        {
+            'title': '婚礼结束',
+            'description': '欢送宾客，整理物品',
+            'start_time': time(14, 0),
+            'end_time': time(15, 0),
+            'location': '酒店',
+            'order_index': 10,
+            'status': 'upcoming',
+            'assignees': [bridesmaids[0].id, bridesmaids[4].id]
+        },
+    ]
+    
+    for node_data in timeline_data:
+        assignees = node_data.pop('assignees', [])
+        node = TimelineNode(wedding_id=wedding.id, **node_data)
+        db.session.add(node)
+        db.session.flush()
+        
+        for bid in assignees:
+            from models import TimelineAssignment
+            ta = TimelineAssignment(
+                timeline_node_id=node.id,
+                bridesmaid_id=bid,
+                role='负责人'
+            )
+            db.session.add(ta)
+    
+    contacts_data = [
+        {'name': '王小雨', 'phone': '13800138001', 'role': '伴娘团长', 'is_primary': True},
+        {'name': '张妈妈', 'phone': '13900139001', 'role': '新娘母亲', 'is_primary': False},
+        {'name': '李爸爸', 'phone': '13700137001', 'role': '新郎父亲', 'is_primary': False},
+        {'name': '陈司仪', 'phone': '13600136001', 'role': '婚礼主持人', 'is_primary': False},
+        {'name': '赵摄影', 'phone': '13500135001', 'role': '婚礼摄影师', 'is_primary': False},
+        {'name': '酒店经理', 'phone': '13400134001', 'role': '酒店对接人', 'is_primary': False},
+    ]
+    
+    for contact_data in contacts_data:
+        contact = EmergencyContact(wedding_id=wedding.id, **contact_data)
+        db.session.add(contact)
+    
+    db.session.commit()
+    print('数据库初始化完成，已添加示例数据')

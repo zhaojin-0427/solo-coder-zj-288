@@ -1,0 +1,58 @@
+body {
+  background: #f5f7fa;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+.status-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-pending {
+  background: #f4f4f5;
+  color: #909399;
+}
+
+.status-in_progress {
+  background: #ecf5ff;
+  color: #409eff;
+}
+
+.status-completed {
+  background: #f0f9eb;
+  color: #67c23a;
+}
+
+.priority-high {
+  color: #f56c6c;
+}
+
+.priority-medium {
+  color: #e6a23c;
+}
+
+.priority-low {
+  color: #909399;
+}
