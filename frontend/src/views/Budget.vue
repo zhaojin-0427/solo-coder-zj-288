@@ -539,7 +539,7 @@ import {
   getExpenses,
   createExpense,
   reviewExpense,
-  uploadReceipt
+  uploadReceiptIndependent
 } from '@/api/budget'
 import { getTasks } from '@/api/task'
 import { getBridesmaids } from '@/api/bridesmaid'
@@ -752,14 +752,7 @@ const beforeReceiptUpload = async (file) => {
       ElMessage.warning('请先提交当前报销再上传新票据')
       return false
     }
-    const tempExpense = await createExpense({
-      wedding_id: WEDDING_ID,
-      category_id: newExpense.value.category_id || 1,
-      amount: 0,
-      purpose: '临时上传票据',
-      submitted_by: newExpense.value.submitted_by || bridesmaids.value[0]?.id || 1
-    })
-    const res = await uploadReceipt(tempExpense.id, file)
+    const res = await uploadReceiptIndependent(file)
     if (res && res.receipt_url) {
       newExpense.value.receipt_url = res.receipt_url
       ElMessage.success('票据上传成功')

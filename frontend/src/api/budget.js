@@ -44,6 +44,14 @@ export function uploadReceipt(expenseId, file) {
   })
 }
 
+export function uploadReceiptIndependent(file) {
+  const formData = new FormData()
+  formData.append('receipt', file)
+  return request.post('/budget/upload-receipt', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
+
 export function getBudgetSummary(weddingId) {
   return request.get('/budget/summary', { params: { wedding_id: weddingId } })
 }

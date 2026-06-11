@@ -143,6 +143,25 @@ def review_expense(expense_id):
     db.session.commit()
     return jsonify(expense.to_dict())
 
+@budget_bp.route('/upload-receipt', methods=['POST'])
+def upload_receipt_independent():
+    if 'receipt' not in request.files:
+        return jsonify({'error': '没有上传文件'}), 400
+    
+    file = request.files['receipt']
+    if file.filename == '':
+        return jsonify({'error': '没有选择文件'}), 400
+    
+    if file:
+        filename = secure_filename(f"receipt_{int(datetime.now().timestamp())}_{file.filename}")
+        filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        
+        receipt_url = f"/static/uploads/{filename}"
+        return jsonify({'receipt_url': receipt_url})
+    
+    return jsonify({'error': '上传失败'}), 500
+
 @budget_bp.route('/expenses/<int:expense_id>/upload-receipt', methods=['POST'])
 def upload_receipt(expense_id):
     expense = ExpenseReimbursement.query.get_or_404(expense_id)
@@ -179,7 +198,8 @@ def get_budget_summary():
     total_budget = sum(c.budget_limit for c in categories)
     total_approved = sum(c.to_dict()['approved_amount'] for c in categories)
     total_pending = sum(c.to_dict()['pending_amount'] for c in categories)
-    total_remaining = total_budget - total_approved
+    total_used = total_approved + total_pending
+    total_remaining = total_budget - total_used
     
     over_budget_count = sum(1 for c in categories if c.to_dict()['is_over_budget'])
     
@@ -207,7 +227,7 @@ def get_budget_summary():
         'total_approved': round(total_approved, 2),
         'total_pending': round(total_pending, 2),
         'total_remaining': round(total_remaining, 2),
-        'overall_usage_rate': round((total_approved / total_budget * 100) if total_budget > 0 else 0, 1),
+        'overall_usage_rate': round((total_used / total_budget * 100) if total_budget > 0 else 0, 1),
         'over_budget_count': over_budget_count,
         'pending_expense_count': pending_expenses,
         'expense_distribution': expense_distribution,

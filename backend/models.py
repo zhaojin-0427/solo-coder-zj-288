@@ -193,7 +193,8 @@ class BudgetCategory(db.Model):
     def to_dict(self):
         approved_amount = sum(e.amount for e in self.expenses if e.status == 'approved')
         pending_amount = sum(e.amount for e in self.expenses if e.status == 'pending')
-        remaining = self.budget_limit - approved_amount
+        used_amount = approved_amount + pending_amount
+        remaining = self.budget_limit - used_amount
         return {
             'id': self.id,
             'wedding_id': self.wedding_id,
@@ -206,8 +207,8 @@ class BudgetCategory(db.Model):
             'approved_amount': round(approved_amount, 2),
             'pending_amount': round(pending_amount, 2),
             'remaining': round(remaining, 2),
-            'is_over_budget': approved_amount > self.budget_limit,
-            'usage_rate': round((approved_amount / self.budget_limit * 100) if self.budget_limit > 0 else 0, 1),
+            'is_over_budget': used_amount > self.budget_limit,
+            'usage_rate': round((used_amount / self.budget_limit * 100) if self.budget_limit > 0 else 0, 1),
             'expense_count': len(self.expenses),
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
