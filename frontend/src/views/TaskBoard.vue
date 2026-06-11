@@ -196,6 +196,27 @@
         </div>
       </div>
     </el-dialog>
+
+    <el-dialog v-model="showClaimDialog" title="认领任务" width="400px">
+      <div v-if="claimingTask" style="margin-bottom: 20px;">
+        <p><strong>任务：</strong>{{ claimingTask.title }}</p>
+        <p style="color: #909399; font-size: 13px; margin-top: 6px;">{{ claimingTask.description }}</p>
+      </div>
+      <el-form label-width="80px">
+        <el-form-item label="选择伴娘">
+          <el-select v-model="claimBridesmaidId" placeholder="请选择认领的伴娘" style="width: 100%;">
+            <el-option v-for="bm in bridesmaids" :key="bm.id" :label="bm.name" :value="bm.id">
+              <span>{{ bm.avatar || '👩' }} {{ bm.name }}</span>
+              <span v-if="bm.role === 'leader'" style="color: #e6a23c; margin-left: 8px; font-size: 12px;">团长</span>
+            </el-option>
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showClaimDialog = false">取消</el-button>
+        <el-button type="success" @click="confirmClaim">确认认领</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -215,7 +236,10 @@ const filterCategory = ref('')
 
 const showAddDialog = ref(false)
 const showDetailDialog = ref(false)
+const showClaimDialog = ref(false)
 const selectedTask = ref(null)
+const claimingTask = ref(null)
+const claimBridesmaidId = ref(null)
 const progressValue = ref(0)
 const newAssignee = ref(null)
 const adjustReason = ref('')
@@ -342,13 +366,22 @@ const createTask = async () => {
   }
 }
 
-const claimTask = async (task) => {
+const claimTask = (task) => {
+  claimingTask.value = task
+  claimBridesmaidId.value = null
+  showClaimDialog.value = true
+}
+
+const confirmClaim = async () => {
+  if (!claimBridesmaidId.value) {
+    ElMessage.warning('请选择认领的伴娘')
+    return
+  }
   try {
-    if (bridesmaids.value.length > 0) {
-      await apiClaimTask(task.id, bridesmaids.value[0].id)
-      ElMessage.success('认领成功')
-      loadTasks()
-    }
+    await apiClaimTask(claimingTask.value.id, claimBridesmaidId.value)
+    ElMessage.success('认领成功')
+    showClaimDialog.value = false
+    loadTasks()
   } catch (e) {
     ElMessage.error('认领失败')
   }

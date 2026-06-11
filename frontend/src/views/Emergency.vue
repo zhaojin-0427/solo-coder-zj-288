@@ -3,7 +3,7 @@
     <div class="page-header">
       <h1 class="page-title">🆘 应急联系人</h1>
       <div class="header-actions">
-        <el-button type="primary" @click="showAddDialog = true" :icon="Plus">
+        <el-button type="primary" @click="openAddDialog" :icon="Plus">
           添加联系人
         </el-button>
       </div>
@@ -118,7 +118,7 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showAddDialog = false">取消</el-button>
+        <el-button @click="cancelAddDialog">取消</el-button>
         <el-button type="primary" @click="saveContact">保存</el-button>
       </template>
     </el-dialog>
@@ -264,6 +264,16 @@ const saveContact = async () => {
   } catch (e) {
     ElMessage.error('保存失败')
   }
+}
+
+const openAddDialog = () => {
+  resetForm()
+  showAddDialog.value = true
+}
+
+const cancelAddDialog = () => {
+  resetForm()
+  showAddDialog.value = false
 }
 
 const resetForm = () => {
