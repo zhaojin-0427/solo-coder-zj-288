@@ -3,6 +3,7 @@ from models import Task, TaskAdjustment, db
 from datetime import datetime
 import os
 from werkzeug.utils import secure_filename
+from routes.risk import calculate_task_risk
 
 task_bp = Blueprint('task', __name__)
 
@@ -21,12 +22,25 @@ def get_tasks():
         query = query.filter_by(status=status)
     
     tasks = query.order_by(Task.created_at.desc()).all()
-    return jsonify([t.to_dict() for t in tasks])
+    result = []
+    for task in tasks:
+        task_dict = task.to_dict()
+        risk = calculate_task_risk(task)
+        task_dict['risk_level'] = risk['risk_level']
+        task_dict['risk_score'] = risk['risk_score']
+        task_dict['risk_reasons'] = risk['risk_reasons']
+        result.append(task_dict)
+    return jsonify(result)
 
 @task_bp.route('/<int:task_id>', methods=['GET'])
 def get_task(task_id):
     task = Task.query.get_or_404(task_id)
-    return jsonify(task.to_dict())
+    task_dict = task.to_dict()
+    risk = calculate_task_risk(task)
+    task_dict['risk_level'] = risk['risk_level']
+    task_dict['risk_score'] = risk['risk_score']
+    task_dict['risk_reasons'] = risk['risk_reasons']
+    return jsonify(task_dict)
 
 @task_bp.route('/', methods=['POST'])
 def create_task():

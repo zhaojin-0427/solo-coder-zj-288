@@ -325,15 +325,15 @@ const newTask = ref({
 })
 
 const pendingTasks = computed(() => {
-  return tasks.value.filter(t => t.status === 'pending' && (!filterCategory.value || t.category === filterCategory.value))
+  return tasks.value.filter(t => t.status === 'pending' && (!filterCategory.value || t.category === filterCategory.value) && (!filterRisk.value || t.risk_level === filterRisk.value))
 })
 
 const inProgressTasks = computed(() => {
-  return tasks.value.filter(t => t.status === 'in_progress' && (!filterCategory.value || t.category === filterCategory.value))
+  return tasks.value.filter(t => t.status === 'in_progress' && (!filterCategory.value || t.category === filterCategory.value) && (!filterRisk.value || t.risk_level === filterRisk.value))
 })
 
 const completedTasks = computed(() => {
-  return tasks.value.filter(t => t.status === 'completed' && (!filterCategory.value || t.category === filterCategory.value))
+  return tasks.value.filter(t => t.status === 'completed' && (!filterCategory.value || t.category === filterCategory.value) && (!filterRisk.value || t.risk_level === filterRisk.value))
 })
 
 const getCategoryName = (catId) => {
@@ -450,11 +450,11 @@ const loadBridesmaids = async () => {
 
 const useMockData = () => {
   tasks.value = [
-    { id: 1, title: '设计堵门游戏方案', description: '准备3-5个有趣的堵门游戏', category: 'door_game', status: 'in_progress', priority: 'high', progress: 60, due_date: '2025-09-20', assigned_name: '王小雨' },
-    { id: 2, title: '准备堵门红包', description: '准备不同面额的堵门红包', category: 'door_game', status: 'pending', priority: 'medium', progress: 0, due_date: '2025-09-28' },
-    { id: 3, title: '采购拍照道具', description: '气球、手持拍照道具等', category: 'photo_props', status: 'completed', priority: 'medium', progress: 100, due_date: '2025-09-25', assigned_name: '刘思琪' },
-    { id: 4, title: '准备应急医药包', description: '创可贴、止痛药等', category: 'emergency_kit', status: 'completed', priority: 'high', progress: 100, due_date: '2025-09-26', assigned_name: '杨雪婷' },
-    { id: 5, title: '接亲路线踩点', description: '提前走一遍接亲路线', category: 'route_check', status: 'completed', priority: 'high', progress: 100, due_date: '2025-09-15', assigned_name: '王小雨' }
+    { id: 1, title: '设计堵门游戏方案', description: '准备3-5个有趣的堵门游戏', category: 'door_game', status: 'in_progress', priority: 'high', progress: 60, due_date: '2025-09-20', assigned_name: '王小雨', risk_level: 'high', risk_score: 75, risk_reasons: ['关键任务逾期', '交付日期临近'] },
+    { id: 2, title: '准备堵门红包', description: '准备不同面额的堵门红包', category: 'door_game', status: 'pending', priority: 'medium', progress: 0, due_date: '2025-09-28', risk_level: 'medium', risk_score: 45, risk_reasons: ['尚未开始', '需协调物资'] },
+    { id: 3, title: '采购拍照道具', description: '气球、手持拍照道具等', category: 'photo_props', status: 'completed', priority: 'medium', progress: 100, due_date: '2025-09-25', assigned_name: '刘思琪', risk_level: 'low', risk_score: 15, risk_reasons: ['已完成'] },
+    { id: 4, title: '准备应急医药包', description: '创可贴、止痛药等', category: 'emergency_kit', status: 'completed', priority: 'high', progress: 100, due_date: '2025-09-26', assigned_name: '杨雪婷', risk_level: 'low', risk_score: 10, risk_reasons: ['已完成'] },
+    { id: 5, title: '接亲路线踩点', description: '提前走一遍接亲路线', category: 'route_check', status: 'completed', priority: 'high', progress: 100, due_date: '2025-09-15', assigned_name: '王小雨', risk_level: 'low', risk_score: 10, risk_reasons: ['已完成'] }
   ]
 }
 

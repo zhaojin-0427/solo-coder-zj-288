@@ -7,8 +7,12 @@
           <span class="logo-text">伴娘团协同</span>
         </div>
         <nav class="nav-menu">
-          <router-link to="/tasks" class="nav-item">
+          <router-link to="/orders" class="nav-item">
             <span class="nav-icon">📋</span>
+            <span>订单列表</span>
+          </router-link>
+          <router-link to="/tasks" class="nav-item">
+            <span class="nav-icon">📝</span>
             <span>任务看板</span>
           </router-link>
           <router-link to="/checklist" class="nav-item">
@@ -18,6 +22,10 @@
           <router-link to="/timeline" class="nav-item">
             <span class="nav-icon">📅</span>
             <span>当天流程</span>
+          </router-link>
+          <router-link to="/production" class="nav-item">
+            <span class="nav-icon">📆</span>
+            <span>生产排期</span>
           </router-link>
           <router-link to="/emergency" class="nav-item">
             <span class="nav-icon">🆘</span>

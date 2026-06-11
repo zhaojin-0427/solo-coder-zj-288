@@ -225,18 +225,18 @@ const loadRiskAssessment = async () => {
 
 const useMockData = () => {
   tasks.value = [
-    { id: 1, title: '设计堵门游戏方案', category: 'door_game', status: 'in_progress', progress: 60, assigned_name: '王小雨' },
-    { id: 2, title: '准备堵门红包', category: 'door_game', status: 'pending', progress: 0 },
-    { id: 3, title: '采购拍照道具', category: 'photo_props', status: 'completed', progress: 100, assigned_name: '刘思琪' },
-    { id: 4, title: '整理拍照pose清单', category: 'photo_props', status: 'in_progress', progress: 40, assigned_name: '陈梦瑶' },
-    { id: 5, title: '准备应急医药包', category: 'emergency_kit', status: 'completed', progress: 100, assigned_name: '杨雪婷' },
-    { id: 6, title: '准备补妆用品', category: 'emergency_kit', status: 'in_progress', progress: 70, assigned_name: '赵嘉怡' },
-    { id: 7, title: '接亲路线踩点', category: 'route_check', status: 'completed', progress: 100, assigned_name: '王小雨' },
-    { id: 8, title: '确认酒店停车位', category: 'route_check', status: 'pending', progress: 0 },
-    { id: 9, title: '新房气球布置', category: 'decoration', status: 'pending', progress: 0 },
-    { id: 10, title: '婚房喜字贴放', category: 'decoration', status: 'pending', progress: 0 },
-    { id: 11, title: '采购喜糖', category: 'logistics', status: 'completed', progress: 100, assigned_name: '刘思琪' },
-    { id: 12, title: '整理伴手礼', category: 'logistics', status: 'in_progress', progress: 50, assigned_name: '陈梦瑶' }
+    { id: 1, title: '设计堵门游戏方案', category: 'door_game', status: 'in_progress', progress: 60, assigned_name: '王小雨', risk_level: 'high', risk_score: 75, risk_reasons: ['关键任务逾期', '交付日期临近'], priority: 'high', due_date: '2025-09-20' },
+    { id: 2, title: '准备堵门红包', category: 'door_game', status: 'pending', progress: 0, risk_level: 'medium', risk_score: 45, risk_reasons: ['尚未开始'], priority: 'medium', due_date: '2025-09-28' },
+    { id: 3, title: '采购拍照道具', category: 'photo_props', status: 'completed', progress: 100, assigned_name: '刘思琪', risk_level: 'low', risk_score: 10, risk_reasons: [], priority: 'medium', due_date: '2025-09-25' },
+    { id: 4, title: '整理拍照pose清单', category: 'photo_props', status: 'in_progress', progress: 40, assigned_name: '陈梦瑶', risk_level: 'medium', risk_score: 40, risk_reasons: ['作品完成数量落后'], priority: 'high', due_date: '2025-09-22' },
+    { id: 5, title: '准备应急医药包', category: 'emergency_kit', status: 'completed', progress: 100, assigned_name: '杨雪婷', risk_level: 'low', risk_score: 5, risk_reasons: [], priority: 'low', due_date: '2025-09-26' },
+    { id: 6, title: '准备补妆用品', category: 'emergency_kit', status: 'in_progress', progress: 70, assigned_name: '赵嘉怡', risk_level: 'low', risk_score: 15, risk_reasons: [], priority: 'medium', due_date: '2025-09-27' },
+    { id: 7, title: '接亲路线踩点', category: 'route_check', status: 'completed', progress: 100, assigned_name: '王小雨', risk_level: 'low', risk_score: 5, risk_reasons: [], priority: 'high', due_date: '2025-09-15' },
+    { id: 8, title: '确认酒店停车位', category: 'route_check', status: 'pending', progress: 0, risk_level: 'high', risk_score: 70, risk_reasons: ['关键任务逾期', '交付日期临近'], priority: 'high', due_date: '2025-09-18' },
+    { id: 9, title: '新房气球布置', category: 'decoration', status: 'pending', progress: 0, risk_level: 'medium', risk_score: 35, risk_reasons: ['尚未开始'], priority: 'medium', due_date: '2025-09-29' },
+    { id: 10, title: '婚房喜字贴放', category: 'decoration', status: 'pending', progress: 0, risk_level: 'low', risk_score: 20, risk_reasons: [], priority: 'low', due_date: '2025-09-30' },
+    { id: 11, title: '采购喜糖', category: 'logistics', status: 'completed', progress: 100, assigned_name: '刘思琪', risk_level: 'low', risk_score: 10, risk_reasons: [], priority: 'high', due_date: '2025-09-20' },
+    { id: 12, title: '整理伴手礼', category: 'logistics', status: 'in_progress', progress: 50, assigned_name: '陈梦瑶', risk_level: 'high', risk_score: 65, risk_reasons: ['材料不足'], priority: 'high', due_date: '2025-09-19' }
   ]
 }
 

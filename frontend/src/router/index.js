@@ -8,6 +8,11 @@ const routes = [
     component: () => import('@/views/TaskBoard.vue')
   },
   {
+    path: '/orders',
+    name: 'Orders',
+    component: () => import('@/views/OrderList.vue')
+  },
+  {
     path: '/checklist',
     name: 'Checklist',
     component: () => import('@/views/Checklist.vue')
@@ -26,6 +31,16 @@ const routes = [
     path: '/stats',
     name: 'Stats',
     component: () => import('@/views/Stats.vue')
+  },
+  {
+    path: '/production',
+    name: 'Production',
+    component: () => import('@/views/ProductionSchedule.vue')
+  },
+  {
+    path: '/orders/:id',
+    name: 'OrderDetail',
+    component: () => import('@/views/OrderDetail.vue')
   }
 ]
 

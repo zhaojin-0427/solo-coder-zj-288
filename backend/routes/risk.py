@@ -5,6 +5,57 @@ from datetime import date, datetime, timedelta
 risk_bp = Blueprint('risk', __name__)
 
 
+def calculate_task_risk(task, wedding_date=None):
+    today = date.today()
+    
+    risk_score = 0
+    risk_reasons = []
+    
+    if task.due_date and task.due_date < today and task.status != 'completed':
+        risk_score += 40
+        if task.priority == 'high':
+            risk_reasons.append('关键任务逾期')
+        else:
+            risk_reasons.append('任务逾期')
+    
+    if task.priority == 'high' and task.status != 'completed':
+        risk_score += 20
+    
+    if task.due_date and task.status != 'completed':
+        days_until_due = (task.due_date - today).days
+        if days_until_due <= 3:
+            risk_score += 30
+            risk_reasons.append('交付日期临近')
+        elif days_until_due <= 7:
+            risk_score += 15
+    
+    if task.category == 'logistics' and task.status != 'completed':
+        if task.due_date and task.due_date < today:
+            risk_score += 20
+            risk_reasons.append('材料不足')
+        elif task.status == 'pending':
+            risk_score += 10
+    
+    if task.progress < 30 and task.status == 'in_progress':
+        risk_score += 15
+        risk_reasons.append('作品完成数量落后')
+    
+    risk_score = min(risk_score, 100)
+    
+    if risk_score >= 60:
+        risk_level = 'high'
+    elif risk_score >= 30:
+        risk_level = 'medium'
+    else:
+        risk_level = 'low'
+    
+    return {
+        'risk_level': risk_level,
+        'risk_score': risk_score,
+        'risk_reasons': risk_reasons
+    }
+
+
 def calculate_wedding_risk(wedding_id):
     wedding = Wedding.query.get(wedding_id)
     if not wedding:
