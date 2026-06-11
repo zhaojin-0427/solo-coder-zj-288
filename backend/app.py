@@ -21,6 +21,7 @@ from routes.bridesmaid import bridesmaid_bp
 from routes.timeline import timeline_bp
 from routes.emergency import emergency_bp
 from routes.stats import stats_bp
+from routes.risk import risk_bp
 
 app.register_blueprint(wedding_bp, url_prefix='/api/wedding')
 app.register_blueprint(task_bp, url_prefix='/api/tasks')
@@ -28,6 +29,7 @@ app.register_blueprint(bridesmaid_bp, url_prefix='/api/bridesmaids')
 app.register_blueprint(timeline_bp, url_prefix='/api/timeline')
 app.register_blueprint(emergency_bp, url_prefix='/api/emergency')
 app.register_blueprint(stats_bp, url_prefix='/api/stats')
+app.register_blueprint(risk_bp, url_prefix='/api/risk')
 
 @app.route('/api/health')
 def health_check():

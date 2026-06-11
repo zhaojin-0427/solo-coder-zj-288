@@ -19,3 +19,7 @@ export function getOverdueTasks(weddingId) {
 export function getAdjustmentHistory(weddingId) {
   return request.get('/stats/adjustments', { params: { wedding_id: weddingId } })
 }
+
+export function getRiskDistribution(weddingId) {
+  return request.get('/stats/risk-distribution', { params: { wedding_id: weddingId } })
+}

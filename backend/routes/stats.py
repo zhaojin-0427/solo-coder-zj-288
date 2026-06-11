@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from models import Wedding, Task, Bridesmaid, TimelineNode, TaskAdjustment, db
 from datetime import date, datetime
 from sqlalchemy import func
+from routes.risk import calculate_wedding_risk
 
 stats_bp = Blueprint('stats', __name__)
 
@@ -154,3 +155,63 @@ def get_adjustment_history():
         result.append(adj_dict)
     
     return jsonify(result)
+
+@stats_bp.route('/risk-distribution', methods=['GET'])
+def get_risk_distribution():
+    wedding_id = request.args.get('wedding_id', type=int)
+
+    if not wedding_id:
+        return jsonify({'error': '缺少 wedding_id 参数'}), 400
+
+    today = date.today()
+    wedding = Wedding.query.get_or_404(wedding_id)
+    tasks = Task.query.filter_by(wedding_id=wedding_id).all()
+
+    risk = calculate_wedding_risk(wedding_id)
+
+    high_risk_tasks = []
+    for task in tasks:
+        risk_reason = None
+        if task.priority == 'high' and task.status != 'completed' and task.due_date and task.due_date < today:
+            risk_reason = '关键任务逾期'
+        elif task.category == 'logistics' and task.due_date and task.due_date < today and task.status != 'completed':
+            risk_reason = '材料不足'
+
+        if risk_reason:
+            assigned_name = None
+            if task.assigned_bridesmaid:
+                assigned_name = task.assigned_bridesmaid.name
+            high_risk_tasks.append({
+                'id': task.id,
+                'title': task.title,
+                'category': task.category,
+                'priority': task.priority,
+                'risk_reason': risk_reason,
+                'assigned_name': assigned_name
+            })
+
+    risk_breakdown = {
+        'delivery_date_risk': 0,
+        'task_overdue_risk': 0,
+        'progress_behind_risk': 0,
+        'material_shortage_risk': 0
+    }
+
+    if '交付日期临近' in risk['risk_reasons']:
+        risk_breakdown['delivery_date_risk'] = 1
+    if '关键任务逾期' in risk['risk_reasons']:
+        risk_breakdown['task_overdue_risk'] = risk['details']['overdue_critical_tasks']
+    if '作品完成数量落后' in risk['risk_reasons']:
+        risk_breakdown['progress_behind_risk'] = 1
+    if '材料不足' in risk['risk_reasons']:
+        risk_breakdown['material_shortage_risk'] = risk['details']['overdue_logistics_tasks']
+
+    risk_distribution = {'low': 0, 'medium': 0, 'high': 0}
+    risk_distribution[risk['risk_level']] = 1
+
+    return jsonify({
+        'risk_distribution': risk_distribution,
+        'high_risk_count': risk_distribution['high'],
+        'high_risk_tasks': high_risk_tasks,
+        'risk_breakdown': risk_breakdown
+    })

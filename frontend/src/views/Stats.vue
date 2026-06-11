@@ -47,6 +47,24 @@
           <div class="stat-label">伴娘人数</div>
         </div>
       </div>
+      <div class="stat-card high-risk">
+        <div class="stat-icon">🚨</div>
+        <div class="stat-content">
+          <div class="stat-value">{{ riskData.high_risk_count }}</div>
+          <div class="stat-label">高风险订单</div>
+        </div>
+      </div>
+      <div class="stat-card risk-level">
+        <div class="stat-icon">⚡</div>
+        <div class="stat-content">
+          <div class="stat-value" style="display: flex; gap: 6px; font-size: 16px;">
+            <el-tag type="danger" size="small">{{ riskData.risk_distribution.high }}</el-tag>
+            <el-tag type="warning" size="small">{{ riskData.risk_distribution.medium }}</el-tag>
+            <el-tag type="success" size="small">{{ riskData.risk_distribution.low }}</el-tag>
+          </div>
+          <div class="stat-label">风险分布(高/中/低)</div>
+        </div>
+      </div>
     </div>
 
     <div class="charts-row">
@@ -121,6 +139,50 @@
       </div>
     </div>
 
+    <div class="charts-row">
+      <div class="chart-card">
+        <h3 class="chart-title">🚨 风险分布统计</h3>
+        <div ref="riskChartRef" class="chart-container"></div>
+      </div>
+      <div class="chart-card">
+        <h3 class="chart-title">⚡ 风险因素分析</h3>
+        <div class="risk-breakdown-list">
+          <div class="risk-breakdown-item">
+            <div class="breakdown-icon">📅</div>
+            <div class="breakdown-info">
+              <div class="breakdown-name">交付日期临近</div>
+              <el-progress :percentage="getBreakdownPercent('delivery_date_risk')" :stroke-width="10" color="#f56c6c" />
+            </div>
+            <div class="breakdown-count">{{ riskData.risk_breakdown.delivery_date_risk }}</div>
+          </div>
+          <div class="risk-breakdown-item">
+            <div class="breakdown-icon">⚠️</div>
+            <div class="breakdown-info">
+              <div class="breakdown-name">关键任务逾期</div>
+              <el-progress :percentage="getBreakdownPercent('task_overdue_risk')" :stroke-width="10" color="#e6a23c" />
+            </div>
+            <div class="breakdown-count">{{ riskData.risk_breakdown.task_overdue_risk }}</div>
+          </div>
+          <div class="risk-breakdown-item">
+            <div class="breakdown-icon">📊</div>
+            <div class="breakdown-info">
+              <div class="breakdown-name">完成进度落后</div>
+              <el-progress :percentage="getBreakdownPercent('progress_behind_risk')" :stroke-width="10" color="#409eff" />
+            </div>
+            <div class="breakdown-count">{{ riskData.risk_breakdown.progress_behind_risk }}</div>
+          </div>
+          <div class="risk-breakdown-item">
+            <div class="breakdown-icon">📦</div>
+            <div class="breakdown-info">
+              <div class="breakdown-name">材料库存不足</div>
+              <el-progress :percentage="getBreakdownPercent('material_shortage_risk')" :stroke-width="10" color="#909399" />
+            </div>
+            <div class="breakdown-count">{{ riskData.risk_breakdown.material_shortage_risk }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="adjustment-history">
       <h3 class="chart-title">📝 任务调整记录</h3>
       <el-table :data="adjustmentHistory" stripe style="width: 100%;">
@@ -157,7 +219,8 @@ import {
   getWorkloadDistribution,
   getStatsByCategory,
   getOverdueTasks,
-  getAdjustmentHistory
+  getAdjustmentHistory,
+  getRiskDistribution
 } from '@/api/stats'
 import { getCategories } from '@/api/task'
 
@@ -170,12 +233,25 @@ const categoryStats = ref([])
 const overdueTasks = ref([])
 const adjustmentHistory = ref([])
 const categories = ref([])
+const riskData = ref({
+  risk_distribution: { low: 0, medium: 0, high: 0 },
+  high_risk_count: 0,
+  high_risk_tasks: [],
+  risk_breakdown: {
+    delivery_date_risk: 0,
+    task_overdue_risk: 0,
+    progress_behind_risk: 0,
+    material_shortage_risk: 0
+  }
+})
 
 const workloadChartRef = ref(null)
 const categoryChartRef = ref(null)
+const riskChartRef = ref(null)
 
 let workloadChart = null
 let categoryChart = null
+let riskChart = null
 
 const getCategoryName = (catId) => {
   const cat = categories.value.find(c => c.id === catId)
@@ -275,6 +351,85 @@ const loadCategories = async () => {
       { id: 'logistics', name: '物资采购', color: '#aa96da' }
     ]
   }
+}
+
+const loadRiskDistribution = async () => {
+  try {
+    const res = await getRiskDistribution(WEDDING_ID)
+    riskData.value = res || riskData.value
+  } catch (e) {
+    riskData.value = {
+      risk_distribution: { low: 3, medium: 2, high: 1 },
+      high_risk_count: 1,
+      high_risk_tasks: [],
+      risk_breakdown: {
+        delivery_date_risk: 1,
+        task_overdue_risk: 2,
+        progress_behind_risk: 1,
+        material_shortage_risk: 1
+      }
+    }
+  }
+}
+
+const getRiskLevelText = (level) => {
+  const map = { low: '低风险', medium: '中风险', high: '高风险' }
+  return map[level] || level
+}
+
+const getRiskLevelType = (level) => {
+  const map = { low: 'success', medium: 'warning', high: 'danger' }
+  return map[level] || 'info'
+}
+
+const getBreakdownPercent = (key) => {
+  const total = Object.values(riskData.value.risk_breakdown).reduce((a, b) => a + b, 0)
+  if (total === 0) return 0
+  return Math.round((riskData.value.risk_breakdown[key] / total) * 100)
+}
+
+const initRiskChart = () => {
+  if (!riskChartRef.value) return
+
+  riskChart = echarts.init(riskChartRef.value)
+
+  const dist = riskData.value.risk_distribution
+
+  const option = {
+    tooltip: {
+      trigger: 'item',
+      formatter: '{b}: {c}个 ({d}%)'
+    },
+    legend: {
+      bottom: 0,
+      data: ['高风险', '中风险', '低风险']
+    },
+    series: [
+      {
+        type: 'pie',
+        radius: ['40%', '70%'],
+        center: ['50%', '45%'],
+        avoidLabelOverlap: false,
+        itemStyle: {
+          borderRadius: 6,
+          borderColor: '#fff',
+          borderWidth: 2
+        },
+        label: {
+          show: true,
+          formatter: '{b}\n{c}个',
+          fontSize: 13
+        },
+        data: [
+          { name: '高风险', value: dist.high, itemStyle: { color: '#f56c6c' } },
+          { name: '中风险', value: dist.medium, itemStyle: { color: '#e6a23c' } },
+          { name: '低风险', value: dist.low, itemStyle: { color: '#67c23a' } }
+        ]
+      }
+    ]
+  }
+
+  riskChart.setOption(option)
 }
 
 const initWorkloadChart = () => {
@@ -414,16 +569,19 @@ onMounted(async () => {
     loadWorkload(),
     loadCategoryStats(),
     loadOverdueTasks(),
-    loadAdjustments()
+    loadAdjustments(),
+    loadRiskDistribution()
   ])
   
   await nextTick()
   initWorkloadChart()
   initCategoryChart()
+  initRiskChart()
   
   window.addEventListener('resize', () => {
     workloadChart?.resize()
     categoryChart?.resize()
+    riskChart?.resize()
   })
 })
 </script>
@@ -435,7 +593,7 @@ onMounted(async () => {
 
 .stats-overview {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -497,6 +655,10 @@ onMounted(async () => {
 .stat-card.overdue .stat-value { color: #f56c6c; }
 .stat-card.bridesmaid .stat-icon { background: #f0f0ff; }
 .stat-card.bridesmaid .stat-value { color: #9093ff; }
+.stat-card.high-risk .stat-icon { background: #fef0f0; }
+.stat-card.high-risk .stat-value { color: #f56c6c; }
+.stat-card.risk-level .stat-icon { background: #fdf6ec; }
+.stat-card.risk-level .stat-value { color: #e6a23c; }
 
 .charts-row {
   display: grid;
@@ -682,5 +844,52 @@ onMounted(async () => {
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+.risk-breakdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.risk-breakdown-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  background: #fafafa;
+  border-radius: 8px;
+}
+
+.breakdown-icon {
+  font-size: 24px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.breakdown-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.breakdown-name {
+  font-size: 13px;
+  color: #606266;
+  margin-bottom: 6px;
+}
+
+.breakdown-count {
+  font-size: 20px;
+  font-weight: 700;
+  color: #303133;
+  min-width: 30px;
+  text-align: center;
+  flex-shrink: 0;
 }
 </style>

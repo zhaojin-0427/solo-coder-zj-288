@@ -41,6 +41,28 @@
       </div>
     </div>
 
+    <div v-if="riskAssessment && riskAssessment.risk_level !== 'low'" class="risk-alert-bar" :class="`risk-${riskAssessment.risk_level}`">
+      <div class="risk-alert-left">
+        <span class="risk-alert-icon">{{ riskAssessment.risk_level === 'high' ? '🔴' : '🟡' }}</span>
+        <span class="risk-alert-text">
+          当前风险等级：
+          <el-tag :type="getRiskLevelType(riskAssessment.risk_level)" size="default" effect="dark">
+            {{ getRiskLevelText(riskAssessment.risk_level) }}
+          </el-tag>
+        </span>
+        <span v-if="riskAssessment.risk_reasons.length > 0" class="risk-reasons">
+          <el-tag v-for="reason in riskAssessment.risk_reasons" :key="reason" :type="riskAssessment.risk_level === 'high' ? 'danger' : 'warning'" size="small" style="margin-left: 6px;">
+            {{ reason }}
+          </el-tag>
+        </span>
+      </div>
+      <div class="risk-alert-right">
+        <span>距婚礼 {{ riskAssessment.details.days_until_wedding }} 天</span>
+        <span>完成率 {{ riskAssessment.details.completion_rate }}%</span>
+        <span>逾期 {{ riskAssessment.details.overdue_tasks }} 项</span>
+      </div>
+    </div>
+
     <div class="checklist-content">
       <div v-for="cat in filteredCategories" :key="cat.id" class="category-section">
         <div class="category-header" :style="{ background: cat.color + '20' }">
@@ -68,6 +90,9 @@
               <span v-if="task.assigned_name" class="task-assignee">
                 👤 {{ task.assigned_name }}
               </span>
+              <el-tag v-if="task.risk_level" :type="getRiskLevelType(task.risk_level)" size="small" style="margin-left: 6px;">
+                {{ getRiskLevelText(task.risk_level) }}
+              </el-tag>
             </div>
             <div class="task-progress">
               <el-progress :percentage="task.progress" :stroke-width="6" :show-text="false" style="width: 100px;" />
@@ -106,12 +131,14 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getTasks, getCategories, updateTask, updateProgress, deleteTask as apiDeleteTask } from '@/api/task'
+import { getRiskAssessment } from '@/api/risk'
 
 const WEDDING_ID = 1
 
 const tasks = ref([])
 const categories = ref([])
 const activeCategory = ref('all')
+const riskAssessment = ref(null)
 
 const showProgressDialog = ref(false)
 const selectedTask = ref(null)
@@ -173,6 +200,29 @@ const loadCategories = async () => {
   }
 }
 
+const loadRiskAssessment = async () => {
+  try {
+    const res = await getRiskAssessment(WEDDING_ID)
+    riskAssessment.value = res || null
+  } catch (e) {
+    riskAssessment.value = {
+      risk_level: 'medium',
+      risk_score: 45,
+      risk_reasons: ['作品完成数量落后', '交付日期临近'],
+      details: {
+        days_until_wedding: 18,
+        completion_rate: 41.7,
+        overdue_critical_tasks: 0,
+        pending_logistics_tasks: 1,
+        overdue_logistics_tasks: 0,
+        total_tasks: 12,
+        completed_tasks: 5,
+        overdue_tasks: 1
+      }
+    }
+  }
+}
+
 const useMockData = () => {
   tasks.value = [
     { id: 1, title: '设计堵门游戏方案', category: 'door_game', status: 'in_progress', progress: 60, assigned_name: '王小雨' },
@@ -188,6 +238,16 @@ const useMockData = () => {
     { id: 11, title: '采购喜糖', category: 'logistics', status: 'completed', progress: 100, assigned_name: '刘思琪' },
     { id: 12, title: '整理伴手礼', category: 'logistics', status: 'in_progress', progress: 50, assigned_name: '陈梦瑶' }
   ]
+}
+
+const getRiskLevelText = (level) => {
+  const map = { low: '低风险', medium: '中风险', high: '高风险' }
+  return map[level] || level
+}
+
+const getRiskLevelType = (level) => {
+  const map = { low: 'success', medium: 'warning', high: 'danger' }
+  return map[level] || 'info'
 }
 
 const toggleTaskStatus = async (task) => {
@@ -248,6 +308,7 @@ const deleteTask = async (task) => {
 onMounted(() => {
   loadCategories()
   loadTasks()
+  loadRiskAssessment()
 })
 </script>
 
@@ -406,5 +467,57 @@ onMounted(() => {
 .task-actions {
   display: flex;
   gap: 4px;
+}
+
+.risk-alert-bar {
+  background: white;
+  border-radius: 12px;
+  padding: 16px 24px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-left: 4px solid #e6a23c;
+}
+
+.risk-alert-bar.risk-high {
+  background: linear-gradient(135deg, #fff5f5 0%, #ffe8e8 100%);
+  border-left-color: #f56c6c;
+}
+
+.risk-alert-bar.risk-medium {
+  background: linear-gradient(135deg, #fdf6ec 0%, #fff3e0 100%);
+  border-left-color: #e6a23c;
+}
+
+.risk-alert-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.risk-alert-icon {
+  font-size: 20px;
+}
+
+.risk-alert-text {
+  font-size: 14px;
+  color: #303133;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.risk-reasons {
+  display: flex;
+  align-items: center;
+}
+
+.risk-alert-right {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  color: #606266;
 }
 </style>

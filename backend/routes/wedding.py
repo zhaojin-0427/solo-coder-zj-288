@@ -1,18 +1,30 @@
 from flask import Blueprint, request, jsonify
 from models import Wedding, db
 from datetime import datetime
+from routes.risk import calculate_wedding_risk
 
 wedding_bp = Blueprint('wedding', __name__)
 
 @wedding_bp.route('/', methods=['GET'])
 def get_weddings():
     weddings = Wedding.query.all()
-    return jsonify([w.to_dict() for w in weddings])
+    result = []
+    for w in weddings:
+        w_dict = w.to_dict()
+        risk = calculate_wedding_risk(w.id)
+        w_dict['risk_level'] = risk['risk_level']
+        w_dict['risk_reasons'] = risk['risk_reasons']
+        result.append(w_dict)
+    return jsonify(result)
 
 @wedding_bp.route('/<int:wedding_id>', methods=['GET'])
 def get_wedding(wedding_id):
     wedding = Wedding.query.get_or_404(wedding_id)
-    return jsonify(wedding.to_dict())
+    w_dict = wedding.to_dict()
+    risk = calculate_wedding_risk(wedding_id)
+    w_dict['risk_level'] = risk['risk_level']
+    w_dict['risk_reasons'] = risk['risk_reasons']
+    return jsonify(w_dict)
 
 @wedding_bp.route('/', methods=['POST'])
 def create_wedding():

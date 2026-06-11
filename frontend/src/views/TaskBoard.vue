@@ -6,13 +6,68 @@
         <el-select v-model="filterCategory" placeholder="按类别筛选" clearable style="width: 160px; margin-right: 12px;">
           <el-option v-for="cat in categories" :key="cat.id" :label="cat.name" :value="cat.id" />
         </el-select>
+        <el-select v-model="filterRisk" placeholder="按风险筛选" clearable style="width: 160px; margin-right: 12px;">
+          <el-option label="高风险" value="high" />
+          <el-option label="中风险" value="medium" />
+          <el-option label="低风险" value="low" />
+        </el-select>
+        <el-button :type="showPriorityView ? 'danger' : 'default'" @click="togglePriorityView" style="margin-right: 12px;">
+          🚨 优先处理
+        </el-button>
         <el-button type="primary" @click="showAddDialog = true" :icon="Plus">
           新建任务
         </el-button>
       </div>
     </div>
 
-    <div class="board-columns">
+    <div v-if="riskAssessment" class="risk-summary-bar">
+      <div class="risk-summary-item">
+        <span class="risk-label">整体风险等级：</span>
+        <el-tag :type="getRiskLevelType(riskAssessment.risk_level)" size="large" effect="dark">
+          {{ getRiskLevelText(riskAssessment.risk_level) }}
+        </el-tag>
+      </div>
+      <div class="risk-summary-item" v-if="riskAssessment.risk_reasons.length > 0">
+        <span class="risk-label">风险原因：</span>
+        <el-tag v-for="reason in riskAssessment.risk_reasons" :key="reason" type="danger" size="small" style="margin-right: 6px;">
+          {{ reason }}
+        </el-tag>
+      </div>
+      <div class="risk-summary-item">
+        <span class="risk-label">距婚礼：</span>
+        <span style="font-weight: 600; color: #303133;">{{ riskAssessment.details.days_until_wedding }} 天</span>
+      </div>
+      <div class="risk-summary-item">
+        <span class="risk-label">完成率：</span>
+        <span style="font-weight: 600;" :style="{ color: riskAssessment.details.completion_rate < 50 ? '#f56c6c' : '#67c23a' }">{{ riskAssessment.details.completion_rate }}%</span>
+      </div>
+    </div>
+
+    <div v-if="showPriorityView" class="priority-view">
+      <h3 class="section-heading">🚨 高风险任务 - 优先处理</h3>
+      <div v-if="highRiskTasks.length === 0" class="empty-priority">
+        <el-empty description="暂无高风险任务" :image-size="80" />
+      </div>
+      <div v-else class="priority-task-list">
+        <div v-for="task in highRiskTasks" :key="task.id" class="priority-task-card" @click="openTaskDetail(task)">
+          <div class="priority-risk-reason">
+            <el-tag type="danger" size="small" effect="dark">{{ task.risk_reason }}</el-tag>
+          </div>
+          <div class="priority-task-title">{{ task.title }}</div>
+          <div class="priority-task-meta">
+            <span class="task-category" :style="{ background: getCategoryColor(task.category) }">
+              {{ getCategoryName(task.category) }}
+            </span>
+            <span>👤 {{ task.assigned_name || '未分配' }}</span>
+            <span>📅 {{ task.due_date }}</span>
+            <span>进度 {{ task.progress }}%</span>
+          </div>
+          <el-progress :percentage="task.progress" :stroke-width="6" :color="task.progress < 30 ? '#f56c6c' : '#409eff'" />
+        </div>
+      </div>
+    </div>
+
+    <div class="board-columns" v-show="!showPriorityView">
       <div class="board-column">
         <div class="column-header pending">
           <span class="column-title">待认领</span>
@@ -32,6 +87,9 @@
               <span v-if="task.due_date" class="due-date">
                 📅 {{ task.due_date }}
               </span>
+              <el-tag v-if="task.risk_level" :type="getRiskLevelType(task.risk_level)" size="small" style="margin-left: 6px;">
+                {{ getRiskLevelText(task.risk_level) }}
+              </el-tag>
             </div>
             <el-button size="small" type="success" class="claim-btn" @click.stop="claimTask(task)">
               认领任务
@@ -63,6 +121,9 @@
               <span v-if="task.due_date" class="due-date">
                 📅 {{ task.due_date }}
               </span>
+              <el-tag v-if="task.risk_level" :type="getRiskLevelType(task.risk_level)" size="small" style="margin-left: 6px;">
+                {{ getRiskLevelText(task.risk_level) }}
+              </el-tag>
             </div>
           </div>
         </div>
@@ -85,6 +146,11 @@
             <el-progress :percentage="100" :stroke-width="6" status="success" />
             <div v-if="task.photo_proof" class="photo-proof">
               <el-image :src="task.photo_proof" fit="cover" style="width: 100%; height: 80px; border-radius: 4px;" />
+            </div>
+            <div class="task-footer" v-if="task.risk_level">
+              <el-tag :type="getRiskLevelType(task.risk_level)" size="small">
+                {{ getRiskLevelText(task.risk_level) }}
+              </el-tag>
             </div>
           </div>
         </div>
@@ -226,6 +292,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { getTasks, getCategories, createTask as apiCreateTask, claimTask as apiClaimTask, updateProgress, assignTask, uploadPhoto } from '@/api/task'
 import { getBridesmaids } from '@/api/bridesmaid'
+import { getRiskAssessment, getHighRiskTasks } from '@/api/risk'
 
 const WEDDING_ID = 1
 
@@ -233,6 +300,10 @@ const tasks = ref([])
 const categories = ref([])
 const bridesmaids = ref([])
 const filterCategory = ref('')
+const filterRisk = ref('')
+const showPriorityView = ref(false)
+const riskAssessment = ref(null)
+const highRiskTasks = ref([])
 
 const showAddDialog = ref(false)
 const showDetailDialog = ref(false)
@@ -283,6 +354,55 @@ const getPriorityText = (p) => {
 const getStatusText = (s) => {
   const map = { pending: '待认领', in_progress: '进行中', completed: '已完成' }
   return map[s] || s
+}
+
+const getRiskLevelText = (level) => {
+  const map = { low: '低风险', medium: '中风险', high: '高风险' }
+  return map[level] || level
+}
+
+const getRiskLevelType = (level) => {
+  const map = { low: 'success', medium: 'warning', high: 'danger' }
+  return map[level] || 'info'
+}
+
+const loadRiskAssessment = async () => {
+  try {
+    const res = await getRiskAssessment(WEDDING_ID)
+    riskAssessment.value = res || null
+  } catch (e) {
+    riskAssessment.value = {
+      risk_level: 'medium',
+      risk_score: 45,
+      risk_reasons: ['作品完成数量落后', '交付日期临近'],
+      details: {
+        days_until_wedding: 18,
+        completion_rate: 41.7,
+        overdue_critical_tasks: 0,
+        pending_logistics_tasks: 1,
+        overdue_logistics_tasks: 0,
+        total_tasks: 12,
+        completed_tasks: 5,
+        overdue_tasks: 1
+      }
+    }
+  }
+}
+
+const loadHighRiskTasks = async () => {
+  try {
+    const res = await getHighRiskTasks(WEDDING_ID)
+    highRiskTasks.value = res?.high_risk_tasks || []
+  } catch (e) {
+    highRiskTasks.value = []
+  }
+}
+
+const togglePriorityView = () => {
+  showPriorityView.value = !showPriorityView.value
+  if (showPriorityView.value) {
+    loadHighRiskTasks()
+  }
 }
 
 const loadTasks = async () => {
@@ -441,6 +561,7 @@ onMounted(() => {
   loadCategories()
   loadBridesmaids()
   loadTasks()
+  loadRiskAssessment()
 })
 </script>
 
@@ -650,5 +771,94 @@ onMounted(() => {
 
 .photo-preview {
   margin-bottom: 10px;
+}
+
+.risk-summary-bar {
+  background: white;
+  border-radius: 12px;
+  padding: 16px 24px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.risk-summary-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.risk-label {
+  font-size: 14px;
+  color: #606266;
+  white-space: nowrap;
+}
+
+.priority-view {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+.section-heading {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 16px;
+}
+
+.empty-priority {
+  padding: 20px;
+}
+
+.priority-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.priority-task-card {
+  background: #fff5f5;
+  border-radius: 10px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.3s;
+  border-left: 4px solid #f56c6c;
+}
+
+.priority-task-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
+}
+
+.priority-risk-reason {
+  margin-bottom: 8px;
+}
+
+.priority-task-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 8px;
+}
+
+.priority-task-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 10px;
+  align-items: center;
+}
+
+.priority-task-meta .task-category {
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: white;
+  font-size: 12px;
 }
 </style>
